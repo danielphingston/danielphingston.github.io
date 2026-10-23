@@ -197,7 +197,7 @@
     <h2 id="ach-h">Selected achievements</h2>
     <article id="ach-rca">
       <h3>Production connectivity root cause analysis</h3>
-      <p>Traced a latency-sensitive IPv6 and IPv4 connection failure through routing behavior, Node.js Happy Eyeballs implementation details and application timeout behavior, leading to a practical mitigation.</p>
+      <p>Traced a latency-sensitive IPv6 and IPv4 connection failure through routing behavior, Node.js Happy Eyeballs implementation details and application timeout behavior, leading to a practical mitigation. Instead of racing IPv6 and IPv4 attempts, Node.js cancelled each attempt when a short timer fired and only then tried the next address, so on slow routes nothing ever connected.</p>
     </article>
     <article id="ach-orch">
       <h3>Distributed job orchestration</h3>

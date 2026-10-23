@@ -220,18 +220,53 @@ function castle() {
   sign('CAMBIUM', b + 110, GY - 40, OL, '#f2cc8f');
 }
 
+// The Happy Eyeballs: the two eyes take turns instead of racing. Each eye's connection attempt
+// to the server is cut off by a timer before it arrives. Once beaten, they sleep and the link is up.
 function boss() {
   const { GY, cam, T, heroX } = world;
   const x = 2895 - cam;
   const shake = !motion.reduced && T - game.bossHit < 0.35 ? Math.round(Math.sin(T * 90) * 2) : 0;
-  const cy = GY - 60 + Math.round(Math.sin(anim() * 1.5) * 3);
+  const cy = GY - 56 + Math.round(Math.sin(anim() * 1.5) * 3);
+  const eyes = [[x - 16 + shake, 'V4', '#e63946'], [x + 16 + shake, 'V6', '#3d6fb6']];
+
+  // Server the eyes try to reach
+  const sx = x + shake, sy = cy - 44;
+  box(sx - 10, sy - 6, 20, 13, '#2b2d42');
+  R(sx - 8, sy - 4, 16, 1, '#4a4e69');
+  R(sx - 8, sy - 2, 16, 1, '#4a4e69');
+  pixelText('SRV', sx - 8, sy + 1, '#a9a7c4');
+  R(sx + 6, sy + 2, 2, 3, game.bossDown ? '#5cf2a0' : blinkOn(2) ? '#e63946' : '#7a2020');
+
+  // One attempt at a time: V6 first, then V4. Each grows toward the server and is cut at 60%.
+  const cycle = motion.reduced ? 0.3 : (T % 2.8) / 2.8;
+  const turn = cycle < 0.5 ? 1 : 0;
+  const local = (cycle % 0.5) / 0.5;
+  const attempt = (ex, frac, color) => {
+    const ax = ex, ay = cy - 13, bx = sx, by = sy + 7;
+    for (let i = 0; i <= 16 * frac; i += 2) R(ax + ((bx - ax) * i) / 16, ay + ((by - ay) * i) / 16, 2, 2, color);
+    return [ax + (bx - ax) * frac, ay + (by - ay) * frac];
+  };
+  if (game.bossDown) {
+    attempt(eyes[1][0], 1, '#5cf2a0');
+  } else {
+    const [ex] = eyes[turn];
+    if (local < 0.75) {
+      attempt(ex, (local / 0.75) * 0.6, '#f2cc8f');
+    } else {
+      const [cx, cyy] = attempt(ex, 0.6, '#7a2020');
+      R(cx - 2, cyy - 2, 1, 1, '#ff5d5d'); R(cx + 2, cyy - 2, 1, 1, '#ff5d5d');
+      R(cx - 1, cyy - 1, 3, 3, '#ff5d5d'); R(cx, cyy, 1, 1, OL);
+      R(cx - 2, cyy + 2, 1, 1, '#ff5d5d'); R(cx + 2, cyy + 2, 1, 1, '#ff5d5d');
+    }
+  }
+
   alpha(0.3, () => R(x - 30, GY, 60, 2, OL));
-  for (const [ex, label, iris] of [[x - 16 + shake, 'V4', '#e63946'], [x + 16 + shake, 'V6', '#3d6fb6']]) {
+  eyes.forEach(([ex, label, iris], idx) => {
     if (game.bossDown) {
       R(ex - 8, cy, 17, 2, '#f4f1de');
       R(ex - 9, cy - 1, 2, 1, '#f4f1de');
       R(ex + 8, cy - 1, 2, 1, '#f4f1de');
-      continue;
+      return;
     }
     disc(ex, cy, 12, OL);
     disc(ex, cy, 11, '#f4f1de');
@@ -243,9 +278,10 @@ function boss() {
     disc(ex + lx, cy + ly, 5, iris);
     disc(ex + lx, cy + ly, 2, OL);
     R(ex + lx - 2, cy + ly - 3, 2, 2, '#ffffff');
-    if (!motion.reduced && (T + (label === 'V6' ? 0.4 : 0)) % 3.2 < 0.12) disc(ex, cy, 11, '#b0505a');
+    // The eye whose turn it isn't waits with a heavy lid: no racing here.
+    if (idx !== turn) for (let r = -11; r < -2; r++) R(ex - Math.floor(Math.sqrt(121 - r * r)), cy + r, Math.floor(Math.sqrt(121 - r * r)) * 2 + 1, 1, '#b0505a');
     pixelText(label, ex - 3, cy + 16, '#f4f1de');
-  }
+  });
   if (game.bossDown) {
     if (!motion.reduced) pixelText('Z', x + 22 + Math.sin(T * 2) * 2, cy - 14 - ((T * 6) % 10), '#f4f1de');
   } else if (chance(10)) {
@@ -414,7 +450,7 @@ export const SCENES = [
   [1620, 1700, robot],
   [1890, 2190, factory],
   [2440, 2720, castle],
-  [2840, 2950, boss],
+  [2840, 2960, boss],
   [3100, 3240, sands],
   [3400, 3540, cave],
   [3690, 4480, workshopRow],
