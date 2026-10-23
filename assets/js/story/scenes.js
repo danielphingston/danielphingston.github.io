@@ -401,6 +401,32 @@ function workshopRow() {
   }
 }
 
+/* ---------- Quest board: freelance work ---------- */
+
+export const QUEST_BOARD_X = 3615;
+
+function questBoard() {
+  const { GY, cam, T } = world;
+  const x = QUEST_BOARD_X + 22 - cam; // the board stands just right of the stop
+  R(x - 20, GY - 30, 3, 30, '#6b4a2a');
+  R(x + 17, GY - 30, 3, 30, '#6b4a2a');
+  box(x - 22, GY - 44, 44, 26, '#8d5a3b');
+  roof(x - 26, GY - 45, 52, 5, '#5a3a22', '#4a2c1a');
+  // Old, faded postings and one fresh poster
+  const papers = [[-18, -40, 8, 9, '#cfc6ad'], [-8, -38, 7, 8, '#d8d0b8'], [9, -41, 9, 10, '#cfc6ad']];
+  for (const [dx, dy, w, h, c] of papers) {
+    R(x + dx, GY + dy, w, h, c);
+    for (let k = 2; k < h - 1; k += 2) R(x + dx + 1, GY + dy + k, w - 2, 1, '#a89f86');
+  }
+  const glow = motion.reduced ? 0 : Math.round(Math.sin(T * 3));
+  box(x - 1, GY - 42 - glow, 9, 12, '#f4f1de');
+  R(x + 1, GY - 40 - glow, 5, 1, '#e07a5f');
+  R(x + 1, GY - 37 - glow, 5, 1, '#a89f86');
+  R(x + 1, GY - 35 - glow, 4, 1, '#a89f86');
+  R(x + 3, GY - 43 - glow, 1, 2, '#e63946'); // pin
+  sign('HIRE ME', x, GY - 57, OL, '#f2cc8f');
+}
+
 /* ---------- Finale: the bonfire and the save crystal ---------- */
 
 function bonfire() {
@@ -456,6 +482,7 @@ export const SCENES = [
   [2840, 2960, boss],
   [3100, 3240, sands],
   [3400, 3540, cave],
+  [3580, 3680, questBoard],
   [3690, 4480, workshopRow],
   [4640, 4760, bonfire],
 ];

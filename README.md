@@ -49,6 +49,8 @@ assets/js/story/
 
 **Update the resume.** Edit the simple view in `index.html`. Story dialogs clone the job bullets, achievements, education and skills from it, so there is nothing to change in the JavaScript.
 
+**Freelance details.** Edit the `#freelance` section near the top of the simple view. The quest board on Workshop Row and the bonfire reuse its list and its email button. Email links take `data-subject` (pre-filled subject) and `data-label` (link text).
+
 **Add a project.** Add an `<li class="project">` to `#project-list` with `data-tags` (for the filters), `data-shop` (a short uppercase sign name) and `data-color`. It gets its own shop on Workshop Row automatically. If the row grows past about eight shops, move the bonfire further right (`END` and `WORLD` in `config.js`, the bonfire stop in `content.js` and its scene in `scenes.js`).
 
 **Add a place to story mode.**
