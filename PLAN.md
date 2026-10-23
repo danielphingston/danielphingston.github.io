@@ -5,6 +5,40 @@ Turn `danielphingston.github.io` from a three-link project list into a personal 
 - **Story mode**: a pixel-art, scroll-driven "game" that walks through the resume as levels, with projects as side quests and skills as inventory.
 - **Simple view**: a clean, fast, printable resume and project index for recruiters, search engines and anyone in a hurry.
 
+## Status and decisions (updated)
+
+Built: phases 1 to 4 below (content and simple view, story engine, procedural pixel art, boss fight, rollback puzzle, achievements, sound, Konami easter egg). See the README for the file layout and how to extend it.
+
+Answers to the open questions:
+
+| Question | Decision |
+| --- | --- |
+| Phone number | Left off the site. Email is assembled by script; LinkedIn and GitHub are linked. No PDF is published, because it contains the phone number; "Print resume" prints the simple view instead. |
+| Job-status line | None. |
+| Nourish (`ICMR`) | Not listed. |
+| Avatar | A generic hero (hoodie, red fighter's headband). |
+| Games and inspiration | Little Fighters 2 as the inspiration (Level 1), plus Dark Souls (the bonfire finale), Prince of Persia (the rollback "rewind" puzzle) and Dota 2. |
+| Default view | Story mode, with "Simple view" on the title card and in the HUD. `?view=simple` links straight to the simple view. |
+
+### Rendering: Canvas 2D, not three.js
+
+three.js was considered and set aside for now:
+
+- The art is 2D pixel art. Canvas 2D at a low logical resolution, scaled up with `image-rendering: pixelated`, gives crisp pixels for free. three.js would need an orthographic camera, nearest-neighbour textures and pixel snapping to get the same result.
+- Size: the whole story engine is about 50 KB unminified with no dependencies; three.js alone is about 150 KB gzipped, plus WebGL setup and context-loss handling.
+- Nothing here needs real 3D, lighting or shaders.
+
+Rendering is isolated in `assets/js/story/` (`gfx.js`, `backdrop.js`, `scenes.js`, `hero.js`), so three.js can be added later where it earns its place. A 3D title scene, or a WebGL layer behind the 2D world, would fit without touching the content or UI modules.
+
+### Blog-ready structure
+
+- The JS is split into small native ES modules, and the CSS into `base` (shared tokens and buttons), `simple` and `story`. A blog page can load `base.css` + `simple.css` and look like the rest of the site.
+- **When the first post is written**, switch the repo to Jekyll, which GitHub Pages builds natively with no local tooling needed:
+  1. Remove `.nojekyll` and add `_config.yml` (with `jekyll-feed` and `jekyll-seo-tag`, both supported by Pages).
+  2. Move the shared `<head>` and footer into `_layouts/default.html` / `_includes/`; posts go in `_posts/YYYY-MM-DD-slug.md` with a `post` layout, and the index at `/blog/`.
+  3. Add a "Blog" link to the simple view, and a story-mode stop: a notice board scene (one entry in `SCENES`) whose dialog (one entry in `STOPS`) lists the latest posts from `/feed.xml` or a small generated `posts.json`.
+- Until then, the site stays a plain static page with no build step.
+
 ## 1. Sources
 
 ### Resume (`ast_resume.pdf`)
@@ -60,22 +94,7 @@ Turn `danielphingston.github.io` from a three-link project list into a personal 
 
 ## 2. Information architecture
 
-One page, one source of truth:
-
-```
-index.html            Simple view markup = the canonical content (SEO, no-JS, print)
-assets/css/base.css   Tokens, simple view, print styles
-assets/css/story.css  Pixel-art story mode
-assets/js/story.js    Story engine: reads content from the simple-view DOM, builds scenes
-assets/js/toggle.js   View switch + preference
-assets/sprites/*.png  Small sprite sheets (character, tiles, props), drawn at 16×16 / 32×32
-assets/og.png         Pixel-art social preview image
-resume.pdf            Downloadable PDF (exported from Folio, see §6)
-```
-
-- **No build step.** This matches how the other projects are built, and GitHub Pages serves it as is (`.nojekyll` is already present).
-- Story mode **reads the simple-view HTML** (`data-*` attributes on each job, project and skill), so content is written once. Updating the resume means editing `index.html` only.
-- Project subpaths (`/falcon/`, etc.) are unaffected because they are separate repos.
+One page, one source of truth: the simple view in `index.html` is the canonical content (SEO, no-JS, print), and story mode clones text from it, so content is written once. No build step; GitHub Pages serves it as is. The full file layout is in the README.
 
 ## 3. Simple view (ship first)
 
@@ -159,9 +178,4 @@ Each phase is a separate commit or PR, so phase 1 can go live while the art is i
 
 ## 8. Open questions
 
-1. **Contact details.** The PDF has a phone number. Recommend leaving the phone off the public site and showing the email (lightly obfuscated) + LinkedIn. OK?
-2. **Job status.** Cambium ends 09/2026. Should the site say "Open to senior backend / distributed-systems roles"?
-3. **Nourish (`ICMR`).** Its README says "No remote deployment has been made", but Pages is enabled. Should it be listed publicly, given it is a clinical tool?
-4. **Avatar.** A pixel version of you (from a photo you provide) or a generic character?
-5. **Interests beyond GitHub.** Games you play, Kerala, anything else you want in the world (pets, hobbies, food)?
-6. **Default view.** Story-first for everyone, or simple-first with a big "Play" button?
+All answered; see **Status and decisions** at the top.

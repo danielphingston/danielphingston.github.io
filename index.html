@@ -1,40 +1,316 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-view="simple">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Personal projects by Daniel Phingston, hosted on GitHub Pages.">
-<title>Daniel Phingston · Projects</title>
-<style>
-  :root { --bg: #f8fafc; --card: #fff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0; --link: #4f46e5; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8; --border: #334155; --link: #a5b4fc; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 640px; margin: 0 auto; padding: 48px 16px; }
-  h1 { margin: 0 0 4px; font-size: 1.75rem; }
-  .muted { color: var(--muted); }
-  ul { list-style: none; padding: 0; margin: 32px 0; display: grid; gap: 12px; }
-  li a { display: block; padding: 16px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: inherit; text-decoration: none; }
-  li a:hover { border-color: var(--link); }
-  li strong { color: var(--link); }
-  li span { display: block; margin-top: 2px; font-size: 0.9rem; color: var(--muted); }
-  footer a { color: var(--link); }
-</style>
+<title>Daniel Phingston · Senior Software Engineer</title>
+<meta name="description" content="Daniel Phingston is a Senior Software Engineer in Kerala, India, building backend and distributed systems with Node.js, TypeScript, Go and AWS. Resume, projects, and a pixel-art story mode.">
+<link rel="canonical" href="https://danielphingston.github.io/">
+<meta name="theme-color" content="#1b1b2f">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Daniel Phingston · Daniel's Quest">
+<meta property="og:description" content="Senior Software Engineer, backend and distributed systems. Walk through the resume as a pixel-art story, or read the simple view.">
+<meta property="og:url" content="https://danielphingston.github.io/">
+<meta property="og:image" content="https://danielphingston.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/story.css">
+<link rel="stylesheet" href="assets/css/simple.css">
+<script>
+  // Pick the view before first paint: ?view= wins, then the visitor's last choice, then story mode.
+  (function () {
+    var v = 'story';
+    try {
+      var q = new URLSearchParams(location.search).get('view');
+      var s = localStorage.getItem('dp-view');
+      v = q === 'simple' || q === 'story' ? q : (s === 'simple' || s === 'story' ? s : 'story');
+    } catch (e) {}
+    document.documentElement.dataset.view = v;
+  })();
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Daniel Phingston",
+  "jobTitle": "Senior Software Engineer",
+  "description": "Backend and distributed systems engineer with 8+ years of experience.",
+  "address": { "@type": "PostalAddress", "addressLocality": "Ernakulam", "addressRegion": "Kerala", "addressCountry": "IN" },
+  "alumniOf": "SCMS School of Engineering and Technology",
+  "url": "https://danielphingston.github.io/",
+  "sameAs": ["https://github.com/danielphingston", "https://www.linkedin.com/in/danielphingston"]
+}
+</script>
+<script type="module" src="assets/js/main.js"></script>
+<script nomodule>document.documentElement.dataset.view = 'simple';</script>
 </head>
 <body>
-<main>
-  <h1>Daniel Phingston</h1>
-  <p class="muted">Personal projects, hosted on GitHub Pages. Source code for each is public on GitHub.</p>
+<a class="skip" href="#simple" data-view-set="simple">Skip to simple view</a>
 
-  <ul>
-    <li><a href="/falcon/"><strong>FDD Tracker</strong><span>Engagements, work papers, IRLs and follow-ups for financial due diligence.</span></a></li>
-    <li><a href="/clinic-register/"><strong>Clinic Register</strong><span>Offline-first outpatient register for a clinic: patients, visits, prescriptions, billing and stock.</span></a></li>
-    <li><a href="/warzone-sens-calibrator/"><strong>Warzone Sens Calibrator</strong><span>Find your mouse sensitivity for Warzone or Valorant from aim drills in the browser.</span></a></li>
-  </ul>
+<!-- Story mode. Built on top of the simple view below: dialogs read their text from it. -->
+<div id="story">
+  <div class="stage">
+    <canvas id="world" role="img" aria-label="Pixel-art world: a hero walks through Daniel's career, from the backwaters of Kerala to a bonfire at the end."></canvas>
 
-  <footer class="muted">Code: <a href="https://github.com/danielphingston">github.com/danielphingston</a></footer>
+    <div class="hud">
+      <div class="hud-level"><span id="hud-level">Kerala Backwaters</span><span class="hud-bar"><span id="hud-progress"></span></span></div>
+      <div class="hud-buttons">
+        <button type="button" class="px-btn" data-panel="map" title="Map and achievements"><span id="hud-stars">★ 0/7</span></button>
+        <button type="button" class="px-btn" data-panel="bag" title="Skills (I)">Bag</button>
+        <button type="button" class="px-btn" id="sound-btn" aria-pressed="false" title="Sound">♪ Off</button>
+        <button type="button" class="px-btn px-btn-alt" data-view-set="simple">Simple view</button>
+      </div>
+    </div>
+
+    <div class="title-card" id="title-card">
+      <p class="tc-kicker">A pixel-art resume</p>
+      <p class="tc-title">Daniel's Quest</p>
+      <p class="tc-name">Daniel Phingston</p>
+      <p class="tc-role">Senior Software Engineer · Backend &amp; Distributed Systems</p>
+      <div class="tc-actions">
+        <button type="button" class="px-btn px-btn-big blink-hover" id="start-btn">▶ Press start</button>
+        <button type="button" class="px-btn px-btn-alt" data-view-set="simple">≡ Simple view</button>
+      </div>
+      <p class="tc-hint">Scroll, swipe, or press → to walk</p>
+    </div>
+
+    <section class="dialog" id="dialog" aria-live="polite" hidden>
+      <header class="dlg-head">
+        <span class="dlg-level" id="dlg-level"></span>
+        <button type="button" class="dlg-close" id="dlg-close" aria-label="Close dialog">✕</button>
+      </header>
+      <h2 class="dlg-title" id="dlg-title"></h2>
+      <div class="dlg-body" id="dlg-body"></div>
+    </section>
+
+    <div class="pad">
+      <button type="button" class="px-btn" id="prev-btn" aria-label="Walk back to the previous stop">◀</button>
+      <button type="button" class="px-btn" id="next-btn" aria-label="Walk to the next stop">▶</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="panel" id="panel-map" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+      <div class="panel-inner">
+        <header class="dlg-head"><h2 class="dlg-title" id="map-title">Map</h2><button type="button" class="dlg-close" data-close aria-label="Close map">✕</button></header>
+        <ol class="map-list" id="map-list"></ol>
+        <h3 class="panel-sub">Achievements</h3>
+        <ul class="ach-list" id="ach-list"></ul>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-bag" role="dialog" aria-modal="true" aria-labelledby="bag-title" hidden>
+      <div class="panel-inner">
+        <header class="dlg-head"><h2 class="dlg-title" id="bag-title">Inventory</h2><button type="button" class="dlg-close" data-close aria-label="Close inventory">✕</button></header>
+        <div id="bag-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Simple view: the canonical content. -->
+<main id="simple" tabindex="-1">
+  <header class="intro">
+    <p class="kicker">Senior Software Engineer · Backend &amp; Distributed Systems</p>
+    <h1>Daniel Phingston</h1>
+    <p class="muted">Ernakulam, Kerala, India</p>
+    <nav class="links" aria-label="Contact">
+      <a href="https://github.com/danielphingston">GitHub</a>
+      <a href="https://www.linkedin.com/in/danielphingston">LinkedIn</a>
+      <a class="email" data-user="danielphingston" data-domain="gmail.com" href="#contact">danielphingston [at] gmail [dot] com</a>
+    </nav>
+    <div class="actions">
+      <button type="button" class="px-btn px-btn-big" data-view-set="story">▶ Play story mode</button>
+      <button type="button" class="btn-plain" id="print-btn">Print resume</button>
+    </div>
+  </header>
+
+  <section id="about" aria-labelledby="about-h">
+    <h2 id="about-h">About</h2>
+    <p>I build backend and distributed systems: 8+ years of network-management, IoT and cloud platforms in Node.js, TypeScript and Go, with PostgreSQL, MongoDB, Redis, RabbitMQ, Amazon SQS, AWS, Docker and Kubernetes. I like tracing a failure through every layer (application, runtime, database, infrastructure and network) until it makes sense, then turning it into a fix that stays fixed.</p>
+    <p>Outside work I build small, local-first tools for the people around me, and play games.</p>
+
+    <h3>Interests</h3>
+    <ul class="interests" id="interests">
+      <li><strong>Local-first software.</strong> Most of my recent projects keep data on your device and sync to storage you own, with no backend in between.</li>
+      <li><strong>Tools for real people.</strong> A register for a clinic, a tracker for a CA doing due diligence, a calibrator for gamers.</li>
+      <li><strong>AI, early and in the browser.</strong> A GPT-2 chatbot prototype in 2019; OCR running on WebGPU today.</li>
+      <li><strong>Security.</strong> Responsible disclosure through HackerOne.</li>
+      <li><strong>Debugging deep.</strong> Following one bug across routing, runtime and timeouts.</li>
+    </ul>
+
+    <h3>Games and inspiration</h3>
+    <ul class="games" id="games">
+      <li data-game="lf2"><strong>Little Fighters 2</strong> <span>A big inspiration: a tiny freeware brawler full of big ideas.</span></li>
+      <li data-game="ds"><strong>Dark Souls</strong> <span>Patience, pattern-reading, and getting back up at the bonfire.</span></li>
+      <li data-game="pop"><strong>Prince of Persia</strong> <span>Rewinding time when a jump goes wrong. Still want that in production.</span></li>
+      <li data-game="dota"><strong>Dota 2</strong> <span>Three lanes, many towers, constant coordination.</span></li>
+    </ul>
+  </section>
+
+  <section id="experience" aria-labelledby="exp-h">
+    <h2 id="exp-h">Experience</h2>
+
+    <article class="job" id="job-cambium">
+      <h3>Senior Software Engineer · <span class="org">Cambium Networks</span></h3>
+      <p class="meta">08/2022 – 09/2026 · Kochi, Kerala</p>
+      <ul>
+        <li>Built and maintained backend capabilities across cnMaestro, a multi-region network-management platform supporting device onboarding, configuration, telemetry and application workflows.</li>
+        <li>Designed reusable foundations for MarketApps and EasyApps, including configuration models, MDU and resident workflows, bulk operations, validation, database structures and migrations.</li>
+        <li>Worked across Node.js services backed by PostgreSQL, MongoDB and Redis, with RabbitMQ RPC, Amazon SQS, and long-lived WebSocket communication between managed devices and the platform.</li>
+        <li>Diagnosed a production IPv6 and IPv4 connectivity failure caused by latency-sensitive Happy Eyeballs behavior in Node.js, tracing the issue across global routing, network failures, connection attempts and application timeouts.</li>
+        <li>Designed rollback-aware orchestration for multi-step distributed operations using transaction IDs and compensating actions, reducing the risk of partially applied configuration changes.</li>
+        <li>Resolved production issues spanning device WebSocket communication, asynchronous messaging, Redis, MongoDB, PostgreSQL-backed services, migrations and automated tests.</li>
+      </ul>
+    </article>
+
+    <article class="job" id="job-gadgeon">
+      <h3>Senior Software Engineer · <span class="org">Gadgeon Systems Inc</span></h3>
+      <p class="meta">02/2020 – 08/2022 · Kakkanad, Kerala</p>
+      <ul>
+        <li>Delivered software across multiple product teams and technology stacks, including assignments as an embedded engineer with Mavenir.</li>
+        <li>Built edge-IoT capabilities using Go, React, MQTT, SingleStore, Docker and AWS EC2.</li>
+        <li>Contributed to an edge-AI and media platform using Node.js, React, FFmpeg, Couchbase, Docker, Kubernetes and AWS.</li>
+        <li>Developed serverless backend services using Node.js, AWS Lambda, AWS SAM, DynamoDB and CI/CD.</li>
+        <li>Built conversational and location-aware experiences using Python, Node.js, the Web Speech API and HERE Maps.</li>
+      </ul>
+    </article>
+
+    <article class="job" id="job-suyati">
+      <h3>Software Developer · <span class="org">Suyati Technologies</span></h3>
+      <p class="meta">07/2018 – 02/2020 · Kakkanad, Kerala</p>
+      <ul>
+        <li>Built proofs of concept and early-stage products in a solutions team, converting new technologies and client ideas into working software.</li>
+        <li>Built a GPT-2 conversational prototype in 2019 using dialogue data extracted and processed from WhatsApp chat exports.</li>
+        <li>Developed chatbot solutions using Dialogflow, Node.js, Python, Microsoft LUIS and Microsoft Bot Framework.</li>
+        <li>Converted an offensive-security web application into a cross-platform Electron desktop application.</li>
+        <li>Helped rebuild the Momentive CMS frontend and developed an employee rewards platform using Node.js, Express, Angular and MongoDB.</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="achievements" aria-labelledby="ach-h">
+    <h2 id="ach-h">Selected achievements</h2>
+    <article id="ach-rca">
+      <h3>Production connectivity root cause analysis</h3>
+      <p>Traced a latency-sensitive IPv6 and IPv4 connection failure through routing behavior, Node.js Happy Eyeballs implementation details and application timeout behavior, leading to a practical mitigation.</p>
+    </article>
+    <article id="ach-orch">
+      <h3>Distributed job orchestration</h3>
+      <p>Designed rollback-aware orchestration for multi-step jobs using transaction IDs and compensating actions to support safer recovery from partial failures.</p>
+    </article>
+    <article id="ach-platform">
+      <h3>Reusable platform foundations</h3>
+      <p>Built shared configuration and data foundations for multiple cnMaestro applications instead of duplicating product-specific backend implementations.</p>
+    </article>
+    <article id="security">
+      <h3>Security research · HackerOne</h3>
+      <p>Identified and responsibly disclosed a payment-flow vulnerability affecting Cleartrip; the report was validated and awarded through HackerOne.</p>
+    </article>
+  </section>
+
+  <section id="projects" aria-labelledby="proj-h">
+    <h2 id="proj-h">Projects</h2>
+    <p class="muted">Side projects, most of them live on GitHub Pages. Source for each is public.</p>
+    <div class="filters" role="group" aria-label="Filter projects">
+      <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" class="chip" data-filter="live" aria-pressed="false">Live apps</button>
+      <button type="button" class="chip" data-filter="local" aria-pressed="false">Local-first</button>
+      <button type="button" class="chip" data-filter="ai" aria-pressed="false">AI</button>
+      <button type="button" class="chip" data-filter="gaming" aria-pressed="false">Gaming</button>
+      <button type="button" class="chip" data-filter="lib" aria-pressed="false">Libraries</button>
+    </div>
+
+    <ul class="projects" id="project-list">
+      <li class="project" id="p-folio" data-tags="live local" data-shop="FOLIO" data-color="#e07a5f">
+        <h3>Folio Resume Studio</h3>
+        <p>Browser-based resume editor with reusable blocks, design presets, multiple local resumes, JSON backup, PDF export and optional Google Drive saves. No server, no build step.</p>
+        <p class="tags">JavaScript · localStorage · Playwright visual tests</p>
+        <p class="plinks"><a href="/resume-builder/">Live</a><a href="https://github.com/danielphingston/resume-builder">Source</a></p>
+      </li>
+      <li class="project" id="p-saveknot" data-tags="local gaming" data-shop="SAVEKNOT" data-color="#81b29a">
+        <h3>SaveKnot</h3>
+        <p>Tiny local-first game-save daemon. Finds saves with the Ludusavi manifest, watches them, takes content-addressed zstd snapshots and syncs straight to your own Cloudflare R2 bucket. No account, no hosted backend.</p>
+        <p class="tags">Go · SQLite · Cloudflare R2 · Windows tray</p>
+        <p class="plinks"><a href="https://github.com/danielphingston/save-knot">Source</a></p>
+      </li>
+      <li class="project" id="p-fdd" data-tags="live local ai" data-shop="FDD" data-color="#3d5a80">
+        <h3>FDD Tracker</h3>
+        <p>Offline PWA for financial due diligence: engagements, work papers, review points, IRLs, follow-ups, a focus timer and timesheets, with Google Drive and Calendar sync and a Gemini assistant.</p>
+        <p class="tags">React · IndexedDB · PWA · Google APIs</p>
+        <p class="plinks"><a href="/falcon/">Live</a><a href="https://github.com/danielphingston/falcon">Source</a></p>
+      </li>
+      <li class="project" id="p-clinic" data-tags="live local" data-shop="CLINIC" data-color="#2a9d8f">
+        <h3>Clinic Register</h3>
+        <p>Offline-first outpatient register for a homeopathy clinic: patients, visits, prescriptions, appointments, billing, stock, certificates and optionally encrypted Google Drive sync.</p>
+        <p class="tags">TypeScript · IndexedDB · PWA</p>
+        <p class="plinks"><a href="/clinic-register/">Live</a><a href="https://github.com/danielphingston/clinic-register">Source</a></p>
+      </li>
+      <li class="project" id="p-ocr" data-tags="live local ai" data-shop="OCR" data-color="#9b5de5">
+        <h3>Bill OCR</h3>
+        <p>Turns photos of bills and receipts into structured JSON with Falcon-OCR running in the browser on WebGPU. Images never leave the device. An experimental proof of concept.</p>
+        <p class="tags">ONNX Runtime Web · WebGPU · Hugging Face</p>
+        <p class="plinks"><a href="/bill-ocr/">Live</a><a href="https://github.com/danielphingston/bill-ocr">Source</a></p>
+      </li>
+      <li class="project" id="p-sens" data-tags="live gaming" data-shop="SENS" data-color="#e63946">
+        <h3>Warzone Sens Calibrator</h3>
+        <p>Finds your Warzone or Valorant mouse sensitivity from flick, tracking and micro-adjust drills, scored with Fitts throughput and a log-scale curve fit.</p>
+        <p class="tags">JavaScript · Pointer Lock · HCI maths</p>
+        <p class="plinks"><a href="/warzone-sens-calibrator/">Live</a><a href="https://github.com/danielphingston/warzone-sens-calibrator">Source</a></p>
+      </li>
+      <li class="project" id="p-bingo" data-tags="live" data-shop="BINGO" data-color="#f4a261">
+        <h3>Dev Env Bingo</h3>
+        <p>A Memphis-pop bingo card of every way a development environment can let you down.</p>
+        <p class="tags">HTML · CSS</p>
+        <p class="plinks"><a href="/dev-bingo/">Live</a><a href="https://github.com/danielphingston/dev-bingo">Source</a></p>
+      </li>
+    </ul>
+
+    <h3>Libraries and earlier work</h3>
+    <ul class="projects small" id="lib-list">
+      <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/couchbase-store">couchbase-store</a></h4><p>Couchbase session store for express-session.</p></li>
+      <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/debounce-throttle-by-key">debounce-throttle-by-key</a></h4><p>Debounce or throttle a function separately for each key.</p></li>
+      <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/rabbitmq-email-publisher">rabbitmq-email-publisher</a></h4><p>Sends emails added to a RabbitMQ queue.</p></li>
+      <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/docker-health-check-node">docker-health-check-node</a></h4><p>Health-checks Docker services before starting, in Node.</p></li>
+      <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/covid-center-watch">covid-center-watch</a></h4><p>2021: watched vaccination centres for open slots and emailed alerts (Vue + AWS Lambda).</p></li>
+    </ul>
+  </section>
+
+  <section id="skills" aria-labelledby="skills-h">
+    <h2 id="skills-h">Skills</h2>
+    <div class="skill-group" data-icon="sword">
+      <h3>Backend &amp; architecture</h3>
+      <ul><li>Node.js</li><li>TypeScript</li><li>JavaScript</li><li>REST APIs</li><li>WebSockets</li><li>Distributed systems</li><li>Event-driven architecture</li><li>System design</li></ul>
+    </div>
+    <div class="skill-group" data-icon="potion">
+      <h3>Data &amp; messaging</h3>
+      <ul><li>PostgreSQL</li><li>MongoDB</li><li>Redis</li><li>DynamoDB</li><li>RabbitMQ</li><li>Amazon SQS</li><li>MQTT</li><li>Database design</li><li>Database migrations</li></ul>
+    </div>
+    <div class="skill-group" data-icon="shield">
+      <h3>Cloud &amp; platform</h3>
+      <ul><li>AWS</li><li>Docker</li><li>Kubernetes</li><li>AWS Lambda</li><li>AWS SAM</li><li>Linux</li><li>CI/CD</li><li>Production troubleshooting</li></ul>
+    </div>
+    <div class="skill-group" data-icon="scroll">
+      <h3>Additional</h3>
+      <ul><li>Go</li><li>Python</li><li>React</li><li>Angular</li><li>FFmpeg</li><li>Networking</li><li>Security</li><li>Generative AI</li></ul>
+    </div>
+  </section>
+
+  <section id="education" aria-labelledby="edu-h">
+    <h2 id="edu-h">Education</h2>
+    <article>
+      <h3>B.Tech, Computer Science and Engineering</h3>
+      <p class="meta">SCMS School of Engineering and Technology · 2014 – 2018 · Kochi, Kerala</p>
+    </article>
+  </section>
+
+  <footer class="foot" id="contact">
+    <p>Hand-built, no build step. <a href="https://github.com/danielphingston/danielphingston.github.io">Source on GitHub</a>.</p>
+  </footer>
 </main>
 </body>
 </html>
