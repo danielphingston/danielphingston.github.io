@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Personal projects by Daniel Phingston, hosted on GitHub Pages.">
+<title>Daniel Phingston · Projects</title>
+<style>
+  :root { --bg: #f8fafc; --card: #fff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0; --link: #4f46e5; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8; --border: #334155; --link: #a5b4fc; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 48px 16px; }
+  h1 { margin: 0 0 4px; font-size: 1.75rem; }
+  .muted { color: var(--muted); }
+  ul { list-style: none; padding: 0; margin: 32px 0; display: grid; gap: 12px; }
+  li a { display: block; padding: 16px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: inherit; text-decoration: none; }
+  li a:hover { border-color: var(--link); }
+  li strong { color: var(--link); }
+  li span { display: block; margin-top: 2px; font-size: 0.9rem; color: var(--muted); }
+  footer a { color: var(--link); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Daniel Phingston</h1>
+  <p class="muted">Personal projects, hosted on GitHub Pages. Source code for each is public on GitHub.</p>
+
+  <ul>
+    <li><a href="/falcon/"><strong>FDD Tracker</strong><span>Engagements, work papers, IRLs and follow-ups for financial due diligence.</span></a></li>
+    <li><a href="/clinic-register/"><strong>Clinic Register</strong><span>Offline-first outpatient register for a clinic: patients, visits, prescriptions, billing and stock.</span></a></li>
+    <li><a href="/warzone-sens-calibrator/"><strong>Warzone Sens Calibrator</strong><span>Find your mouse sensitivity for Warzone or Valorant from aim drills in the browser.</span></a></li>
+  </ul>
+
+  <footer class="muted">Code: <a href="https://github.com/danielphingston">github.com/danielphingston</a></footer>
+</main>
+</body>
+</html>
