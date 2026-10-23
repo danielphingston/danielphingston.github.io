@@ -343,11 +343,6 @@ function cave() {
   R(c - 40, GY - 8, 3, 8, '#9b5de5');
   R(c - 37, GY - 5, 2, 5, '#c39bff');
   R(c + 36, GY - 6, 3, 6, '#9b5de5');
-  // A small pile of coins beside the bug
-  for (const [dx, dy] of [[-12, 0], [-9, -1], [-15, -1], [-11, -3], [12, 0], [15, -1]]) {
-    R(c + dx - 1, GY - 3 + dy, 3, 2, '#f2cc8f');
-    R(c + dx, GY - 3 + dy, 1, 1, '#fff1c1');
-  }
   if (!game.bugCaught) {
     const by = GY - 6;
     R(c - 3, by - 3, 7, 4, '#4ade80');

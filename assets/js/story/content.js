@@ -222,36 +222,14 @@ function sands(body) {
   }]]);
 }
 
-// The bug bounty: Cleartrip let Flipkart coins be redeemed in any currency at face value,
-// so a coin meant to be worth ₹1 could be spent as $1, £1 or 1 Kuwaiti dinar.
-// Multipliers are rough, deliberately rounded down, since exchange rates move.
-const COIN_PAYMENTS = [
-  ['₹ INR', '₹100', 'Working as intended.'],
-  ['$ USD', '$100', 'That is over ₹8,000: about 80x what the coins are worth.'],
-  ['£ GBP', '£100', 'That is over ₹10,000: more than 100x what the coins are worth.'],
-  ['KD KWD', 'KD 100', 'That is over ₹25,000: more than 250x what the coins are worth.'],
-];
 function cave(body) {
-  if (game.bugCaught) {
-    narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
-    cloneInto(body, '#security p');
+  if (!game.bugCaught) {
+    narrate(body, "Something glitters deep in the cave: a bug that breaks Cleartrip's payments.");
+    actions(body, [['Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); }]]);
     return;
   }
-  narrate(body, 'Something glitters in the cave: a Cleartrip checkout with 100 Flipkart coins in the wallet. Each coin is meant to be worth ₹1.');
-  body.append(el('p', 'meta', 'Pick a currency to pay in:'));
-  const log = el('p', 'log', '');
-  let reportShown = false;
-  const row = actions(body, COIN_PAYMENTS.map(([label, paid, note], i) => [`Pay in ${label}`, () => {
-    log.textContent = `100 coins → ${paid}. ${note}`;
-    sfx(i ? 'hit' : 'blip');
-    if (i && !reportShown) {
-      reportShown = true;
-      const report = button('Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); });
-      body.append(el('p', null, 'The coins keep their number but take on the new currency. Time to tell someone.'));
-      actions(body, []).append(report);
-    }
-  }]));
-  row.after(log);
+  narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
+  cloneInto(body, '#security p');
 }
 
 const GREETINGS = [
@@ -302,7 +280,7 @@ export const STOPS = [
   },
   { id: 'boss', x: 2895, level: 'Level 5 · Boss fight', title: 'The Happy Eyeballs', build: boss },
   { id: 'sands', x: 3150, level: 'Level 5 · Sands of Rollback', title: 'Rewind the job', build: sands },
-  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'The 100x coin bug', build: cave },
+  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'A bug in the payments', build: cave },
   ...shops.map((s) => ({
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),
