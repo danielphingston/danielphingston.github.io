@@ -40,10 +40,13 @@ function spark() {
   R(b + 18, GY - 24, 28, 3, '#3b5d2e');
   const t = anim();
   const swing = Math.floor(t * 2) % 2 === 0;
-  tinyFighter(b + 23, GY - 24, '#3d6fb6', 1, swing);
+  // Modded: the blue fighter turns gold and throws huge, fast energy balls.
+  const mod = game.lf2Modded;
+  tinyFighter(b + 23, GY - 24, mod ? '#f2cc8f' : '#3d6fb6', 1, swing);
   tinyFighter(b + 39, GY - 24, '#e63946', -1, !swing);
-  const p = (t * 0.8) % 1;
-  R(b + 26 + p * 11, GY - 30, 2, 2, p < 0.5 ? '#9ff0ff' : '#ffd36e');
+  const p = (t * (mod ? 2.4 : 0.8)) % 1;
+  const size = mod ? 4 : 2;
+  R(b + 26 + p * (13 - size), GY - 31 - size / 2, size, size, mod ? ['#9ff0ff', '#f2cc8f', '#ff8a8a'][Math.floor(t * 10) % 3] : p < 0.5 ? '#9ff0ff' : '#ffd36e');
   R(b + 28, GY - 16, 8, 3, '#d8d0b8');
   R(b + 12, GY - 13, 44, 2, '#5a3a22');
   box(b + 70, GY - 32, 16, 32, '#5a3a22');
@@ -340,6 +343,11 @@ function cave() {
   R(c - 40, GY - 8, 3, 8, '#9b5de5');
   R(c - 37, GY - 5, 2, 5, '#c39bff');
   R(c + 36, GY - 6, 3, 6, '#9b5de5');
+  // A small pile of coins beside the bug
+  for (const [dx, dy] of [[-12, 0], [-9, -1], [-15, -1], [-11, -3], [12, 0], [15, -1]]) {
+    R(c + dx - 1, GY - 3 + dy, 3, 2, '#f2cc8f');
+    R(c + dx, GY - 3 + dy, 1, 1, '#fff1c1');
+  }
   if (!game.bugCaught) {
     const by = GY - 6;
     R(c - 3, by - 3, 7, 4, '#4ade80');

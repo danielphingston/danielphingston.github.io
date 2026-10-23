@@ -90,6 +90,8 @@
 .hp-bar { flex: 1; height: 10px; background: #3a3a5a; border: 2px solid var(--ui-fg); }
 .hp-bar span { display: block; height: 100%; background: var(--ui-red); transition: width .3s steps(4, end); }
 .log { color: var(--ui-dim); min-height: 2.4em; }
+.mod-file { margin: 0 0 10px; padding: 8px 10px; background: #12122a; border: 2px dashed #3a3a5a; font-family: var(--font-term); font-size: 19px; line-height: 1.15; white-space: pre-wrap; color: #9ff0c8; }
+
 /* Happy Eyeballs timelines */
 .race { margin: 4px 0 12px; padding: 8px 10px; border: 2px solid #3a3a5a; }
 .race figcaption { font-family: var(--font-pixel); font-size: 9px; line-height: 1.5; color: var(--ui-gold); margin-bottom: 8px; }

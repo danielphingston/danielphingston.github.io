@@ -18,10 +18,30 @@ function job(selector, line) {
   };
 }
 
+// Little Fighters 2 was easy to mod, and modding it is what led into programming.
+// "Mod it" edits a (made-up) character file and the fight on the CRT changes to match.
+const LF2_MOD = [
+  ['hp', '500', '9999'],
+  ['ball_speed', '10', '40'],
+  ['ball_size', '1', '4'],
+];
 function spark(body) {
-  narrate(body, 'Long before the job titles there was Little Fighters 2, a tiny freeware brawler. A big inspiration.');
-  body.append(el('p', 'meta', 'On the shelf next to it:'));
-  cloneInto(body, '#games');
+  narrate(body, 'Long before the job titles there was Little Fighters 2. It was easy to mod, and modding it is what led me into programming.');
+  const file = el('pre', 'mod-file');
+  const paint = () => {
+    file.textContent = ['# davis.dat', ...LF2_MOD.map(([key, from, to]) => `${key.padEnd(11)} ${game.lf2Modded ? `${from} → ${to}` : from}`)].join('\n');
+  };
+  paint();
+  body.append(file);
+  actions(body, [[game.lf2Modded ? 'Undo the mod' : 'Mod it', (btn) => {
+    game.lf2Modded = !game.lf2Modded;
+    btn.textContent = game.lf2Modded ? 'Undo the mod' : 'Mod it';
+    paint();
+    sfx(game.lf2Modded ? 'hit' : 'blip');
+    if (game.lf2Modded) unlock('spark');
+  }]]);
+  body.append(el('p', 'meta', 'Also on the shelf:'));
+  cloneInto(body, '#games')?.querySelector('[data-game="lf2"]')?.remove();
 }
 
 function school(body) {
@@ -202,14 +222,36 @@ function sands(body) {
   }]]);
 }
 
+// The bug bounty: Cleartrip let Flipkart coins be redeemed in any currency at face value,
+// so a coin meant to be worth ₹1 could be spent as $1, £1 or 1 Kuwaiti dinar.
+// Multipliers are rough, deliberately rounded down, since exchange rates move.
+const COIN_PAYMENTS = [
+  ['₹ INR', '₹100', 'Working as intended.'],
+  ['$ USD', '$100', 'That is over ₹8,000: about 80x what the coins are worth.'],
+  ['£ GBP', '£100', 'That is over ₹10,000: more than 100x what the coins are worth.'],
+  ['KD KWD', 'KD 100', 'That is over ₹25,000: more than 250x what the coins are worth.'],
+];
 function cave(body) {
-  if (!game.bugCaught) {
-    narrate(body, 'Something glitters deep in the cave, right in the middle of a payment flow.');
-    actions(body, [['Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); }]]);
+  if (game.bugCaught) {
+    narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
+    cloneInto(body, '#security p');
     return;
   }
-  narrate(body, 'Reported, validated and rewarded. The bug now lives on a plaque.');
-  cloneInto(body, '#security p');
+  narrate(body, 'Something glitters in the cave: a Cleartrip checkout with 100 Flipkart coins in the wallet. Each coin is meant to be worth ₹1.');
+  body.append(el('p', 'meta', 'Pick a currency to pay in:'));
+  const log = el('p', 'log', '');
+  let reportShown = false;
+  const row = actions(body, COIN_PAYMENTS.map(([label, paid, note], i) => [`Pay in ${label}`, () => {
+    log.textContent = `100 coins → ${paid}. ${note}`;
+    sfx(i ? 'hit' : 'blip');
+    if (i && !reportShown) {
+      reportShown = true;
+      const report = button('Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); });
+      body.append(el('p', null, 'The coins keep their number but take on the new currency. Time to tell someone.'));
+      actions(body, []).append(report);
+    }
+  }]));
+  row.after(log);
 }
 
 const GREETINGS = [
@@ -243,7 +285,7 @@ function bonfire(body) {
 
 // Every place the hero stops. x is the world position; the dialog opens within RANGE of it.
 export const STOPS = [
-  { id: 'spark', x: 560, level: 'Level 1 · The Spark', title: 'Little Fighters 2', ach: 'spark', build: spark },
+  { id: 'spark', x: 560, level: 'Level 1 · The Spark', title: 'Little Fighters 2', build: spark },
   { id: 'school', x: 1005, level: 'Level 2 · SCMS Academy', title: text('#education h3'), build: school },
   {
     id: 'suyati', x: 1480, level: 'Level 3 · Suyati Lab · 2018–2020', title: text('#job-suyati h3'),
@@ -260,7 +302,7 @@ export const STOPS = [
   },
   { id: 'boss', x: 2895, level: 'Level 5 · Boss fight', title: 'The Happy Eyeballs', build: boss },
   { id: 'sands', x: 3150, level: 'Level 5 · Sands of Rollback', title: 'Rewind the job', build: sands },
-  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'Security research', build: cave },
+  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'The 100x coin bug', build: cave },
   ...shops.map((s) => ({
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),
