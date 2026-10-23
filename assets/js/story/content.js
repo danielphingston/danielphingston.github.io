@@ -7,7 +7,8 @@ import { sfx } from './feedback.js';
 import { walkTo } from './nav.js';
 import { setView } from '../view.js';
 import { openPanel } from './panels.js';
-import { shops, SHOP_START } from './shops.js';
+import { shops } from './shops.js';
+import { QUEST_BOARD_X } from './scenes.js';
 import { narrate, cloneInto, actions, button, later, refreshDialog } from './dialog.js';
 
 function job(selector, line) {
@@ -222,36 +223,14 @@ function sands(body) {
   }]]);
 }
 
-// The bug bounty: Cleartrip let Flipkart coins be redeemed in any currency at face value,
-// so a coin meant to be worth ₹1 could be spent as $1, £1 or 1 Kuwaiti dinar.
-// Multipliers are rough, deliberately rounded down, since exchange rates move.
-const COIN_PAYMENTS = [
-  ['₹ INR', '₹100', 'Working as intended.'],
-  ['$ USD', '$100', 'That is over ₹8,000: about 80x what the coins are worth.'],
-  ['£ GBP', '£100', 'That is over ₹10,000: more than 100x what the coins are worth.'],
-  ['KD KWD', 'KD 100', 'That is over ₹25,000: more than 250x what the coins are worth.'],
-];
 function cave(body) {
-  if (game.bugCaught) {
-    narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
-    cloneInto(body, '#security p');
+  if (!game.bugCaught) {
+    narrate(body, "Something glitters deep in the cave: a bug that breaks Cleartrip's payments.");
+    actions(body, [['Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); }]]);
     return;
   }
-  narrate(body, 'Something glitters in the cave: a Cleartrip checkout with 100 Flipkart coins in the wallet. Each coin is meant to be worth ₹1.');
-  body.append(el('p', 'meta', 'Pick a currency to pay in:'));
-  const log = el('p', 'log', '');
-  let reportShown = false;
-  const row = actions(body, COIN_PAYMENTS.map(([label, paid, note], i) => [`Pay in ${label}`, () => {
-    log.textContent = `100 coins → ${paid}. ${note}`;
-    sfx(i ? 'hit' : 'blip');
-    if (i && !reportShown) {
-      reportShown = true;
-      const report = button('Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); });
-      body.append(el('p', null, 'The coins keep their number but take on the new currency. Time to tell someone.'));
-      actions(body, []).append(report);
-    }
-  }]));
-  row.after(log);
+  narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
+  cloneInto(body, '#security p');
 }
 
 const GREETINGS = [
@@ -271,11 +250,23 @@ function shop(s) {
   };
 }
 
+// Freelance: a quest board by the Workshop Row gate.
+function questBoard(body) {
+  narrate(body, 'A notice board by the gate. One poster is fresher than the rest: "Adventurer available for hire."');
+  cloneInto(body, '#freelance ul');
+  cloneInto(body, '#freelance .cta');
+}
+
 function bonfire(body) {
   game.lit = true;
+  unlock('bonfire'); // before counting achievements below
   narrate(body, 'Rest a while. Thanks for playing.');
+  body.append(el('p', null, 'Got a quest of your own? I take on freelance work.'));
+  cloneInto(body, '#freelance .cta a.email');
   body.append(el('p', 'meta', `Achievements: ${game.got.size} of ${ACH.length}`), el('p', null, 'Say hello:'));
-  cloneInto(body, '#simple .links')?.classList.add('plinks');
+  const links = cloneInto(body, '#simple .links');
+  links?.classList.add('plinks');
+  links?.querySelector('a[href="#freelance"]')?.remove(); // that section is hidden in story mode
   actions(body, [
     ['Open the bag (skills)', () => openPanel('bag')],
     ['Read the simple view', () => setView('simple')],
@@ -302,11 +293,12 @@ export const STOPS = [
   },
   { id: 'boss', x: 2895, level: 'Level 5 · Boss fight', title: 'The Happy Eyeballs', build: boss },
   { id: 'sands', x: 3150, level: 'Level 5 · Sands of Rollback', title: 'Rewind the job', build: sands },
-  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'The 100x coin bug', build: cave },
+  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'A bug in the payments', build: cave },
+  { id: 'quests', x: QUEST_BOARD_X, level: 'Level 6 · Quest board', title: 'Freelance quests', build: questBoard },
   ...shops.map((s) => ({
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),
-  { id: 'bonfire', x: 4660, level: 'Final · Bonfire', title: 'Bonfire lit', ach: 'bonfire', build: bonfire },
+  { id: 'bonfire', x: 4660, level: 'Final · Bonfire', title: 'Bonfire lit', build: bonfire },
 ];
 
 // Named areas for the HUD and the map: [name, world x where it starts].
@@ -318,6 +310,6 @@ export const LEVELS = [
   ['Gadgeon Works', 2040],
   ['Cambium Citadel', 2580],
   ['Bug Bounty Cave', 3450],
-  ['Workshop Row', SHOP_START],
+  ['Workshop Row', QUEST_BOARD_X],
   ['Bonfire', 4660],
 ];

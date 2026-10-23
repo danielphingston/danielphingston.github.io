@@ -17,6 +17,13 @@
 .interests, .games { padding-left: 20px; }
 .interests li, .games li { margin: 0 0 8px; }
 .games span { color: var(--muted); }
+.callout { margin-top: 32px; padding: 4px 20px 18px; background: var(--card); border: 2px solid var(--text); box-shadow: 6px 6px 0 var(--accent); }
+.callout h2 { margin-top: 18px !important; }
+.callout ul { padding-left: 20px; }
+.callout li { margin: 0 0 4px; }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 0; }
+.btn-cta { display: inline-block; padding: 10px 16px; background: var(--text); color: var(--bg); font-weight: 600; text-decoration: none; }
+.btn-cta:hover { background: var(--accent); color: #1b1b2f; }
 .job { margin: 0 0 28px; }
 .job ul { padding-left: 20px; }
 .job li { margin: 0 0 6px; }

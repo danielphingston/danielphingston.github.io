@@ -49,7 +49,7 @@ Rendering is isolated in `assets/js/story/` (`gfx.js`, `backdrop.js`, `scenes.js
 | Summary | Backend, distributed, network-management, IoT and cloud systems; production troubleshooting and reliability |
 | Skills | Backend & Architecture · Data & Messaging · Cloud & Platform · Additional (Go, Python, React, Angular, FFmpeg, networking, security, generative AI) |
 | Cambium Networks (08/2022 – 09/2026) | cnMaestro multi-region platform, MarketApps/EasyApps foundations, Node.js + PostgreSQL/MongoDB/Redis + RabbitMQ RPC/SQS + device WebSockets, IPv6/IPv4 Happy Eyeballs root cause, rollback-aware orchestration |
-| Gadgeon Systems (02/2020 – 08/2022) | Embedded work with Mavenir, edge IoT (Go, React, MQTT, SingleStore), edge AI and media (FFmpeg, Couchbase, K8s), serverless (Lambda, SAM, DynamoDB), voice + HERE Maps experiences |
+| Gadgeon Systems (02/2020 – 08/2022) | Embedded work with Mavenir, edge IoT (Go, React, MQTT, SingleStore), edge AI and media (FFmpeg, Couchbase), serverless (Lambda, SAM, DynamoDB), voice + HERE Maps experiences |
 | Suyati Technologies (07/2018 – 02/2020) | Solutions/PoC team, **GPT-2 chatbot prototype in 2019** trained on WhatsApp exports, Dialogflow/LUIS/Bot Framework bots, Electron port of a security app, Momentive CMS and a rewards platform |
 | Achievements | Production connectivity RCA, distributed job orchestration, reusable platform foundations |
 | Security research | HackerOne: validated and rewarded Cleartrip payment-flow vulnerability |
@@ -129,7 +129,7 @@ Scroll (or ←/→, swipe, or on-screen arrows) moves a pixel-art Daniel through
 
 **HUD and meta**
 
-- **Inventory** (`I` key or a bag icon): skills as items grouped like the resume. Node.js sword, PostgreSQL shield, RabbitMQ carrier pigeon, Kubernetes ship's wheel, Go gopher pet.
+- **Inventory** (`I` key or a bag icon): skills as items grouped like the resume. Node.js sword, PostgreSQL shield, RabbitMQ carrier pigeon, Go gopher pet.
 - **Quest log**: a progress bar of levels visited, and a "Skip to level" menu.
 - **Achievements toast**: "Found the GPT-2 relic", "Defeated Happy Eyeballs", "Visited every shop". Stored in `localStorage` (wrapped in try/catch).
 - **Easter eggs**: the Konami code opens the dev-bingo card; the arcade cabinet for the sens calibrator shows a crosshair cursor.

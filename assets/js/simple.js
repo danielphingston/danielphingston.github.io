@@ -2,10 +2,12 @@
 import { $, $$ } from './lib/util.js';
 
 // The address is assembled here so it is not sitting in the HTML for scrapers.
+// Optional data-subject pre-fills the subject; data-label replaces the address as the link text.
 $$('a.email').forEach((a) => {
   const addr = `${a.dataset.user}@${a.dataset.domain}`;
-  a.href = `mailto:${addr}`;
-  a.textContent = addr;
+  const subject = a.dataset.subject ? `?subject=${encodeURIComponent(a.dataset.subject)}` : '';
+  a.href = `mailto:${addr}${subject}`;
+  a.textContent = a.dataset.label || addr;
 });
 
 $$('.filters .chip').forEach((chip) => chip.addEventListener('click', () => {

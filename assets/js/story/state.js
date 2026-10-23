@@ -19,7 +19,7 @@ export const ACH = [
   ['relic', 'Woke the GPT-2 relic'],
   ['boss', 'Defeated the Happy Eyeballs'],
   ['rewind', 'Rewound the sands'],
-  ['bug', 'Caught the 100x coin bug'],
+  ['bug', 'Caught the payment bug'],
   ['shopper', 'Visited every shop'],
   ['bonfire', 'Lit the bonfire'],
 ];

@@ -47,6 +47,8 @@
 .tc-name { font-family: var(--font-pixel); font-size: 12px; line-height: 1.6; }
 .tc-role { font-family: var(--font-term); font-size: 22px; color: var(--ui-dim); }
 .tc-actions { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin: 20px 0 14px; }
+.tc-hire { font-family: var(--font-term); font-size: 21px; margin: 0 0 10px !important; }
+.tc-hire a { color: var(--ui-gold); }
 .tc-hint { font-family: var(--font-term); font-size: 20px; animation: blink 1.2s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden; } }
 
@@ -189,3 +191,9 @@
   .toast, .title-card { transition: none; }
 }
 
+
+/* Freelance call-to-action cloned into story dialogs */
+.dlg-body .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.dlg-body .cta .muted { color: var(--ui-dim); }
+.dlg-body .btn-cta { display: inline-block; margin: 2px 0 10px; padding: 9px 12px 8px; font-family: var(--font-pixel); font-size: 10px; line-height: 1.4; color: var(--ui-bg); background: var(--ui-gold); text-decoration: none; border: 3px solid var(--ui-gold); }
+.dlg-body .btn-cta:hover { background: #ffe3a8; }
