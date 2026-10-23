@@ -18,10 +18,30 @@ function job(selector, line) {
   };
 }
 
+// Little Fighters 2 was easy to mod, and modding it is what led into programming.
+// "Mod it" edits a (made-up) character file and the fight on the CRT changes to match.
+const LF2_MOD = [
+  ['hp', '500', '9999'],
+  ['ball_speed', '10', '40'],
+  ['ball_size', '1', '4'],
+];
 function spark(body) {
-  narrate(body, 'Long before the job titles there was Little Fighters 2, a tiny freeware brawler. A big inspiration.');
-  body.append(el('p', 'meta', 'On the shelf next to it:'));
-  cloneInto(body, '#games');
+  narrate(body, 'Long before the job titles there was Little Fighters 2. It was easy to mod, and modding it is what led me into programming.');
+  const file = el('pre', 'mod-file');
+  const paint = () => {
+    file.textContent = ['# davis.dat', ...LF2_MOD.map(([key, from, to]) => `${key.padEnd(11)} ${game.lf2Modded ? `${from} → ${to}` : from}`)].join('\n');
+  };
+  paint();
+  body.append(file);
+  actions(body, [[game.lf2Modded ? 'Undo the mod' : 'Mod it', (btn) => {
+    game.lf2Modded = !game.lf2Modded;
+    btn.textContent = game.lf2Modded ? 'Undo the mod' : 'Mod it';
+    paint();
+    sfx(game.lf2Modded ? 'hit' : 'blip');
+    if (game.lf2Modded) unlock('spark');
+  }]]);
+  body.append(el('p', 'meta', 'Also on the shelf:'));
+  cloneInto(body, '#games')?.querySelector('[data-game="lf2"]')?.remove();
 }
 
 function school(body) {
@@ -48,22 +68,89 @@ function robot(body) {
   }]]);
 }
 
-// The root-cause analysis as a boss fight: the steps must be found in order.
+// The Happy Eyeballs bug as a boss fight.
+// Happy Eyeballs (RFC 8305) should race IPv6 and IPv4: start one attempt, start the next after a short
+// delay, keep both going, and use whichever connects first. Node.js instead tried one address at a
+// time and cancelled each attempt when a short timer fired. On a slow route every attempt was cut off
+// before its handshake could finish, so nothing connected.
 const BOSS_STEPS = [
-  ['Trace global routing', 'Routing first: whether it fails depends on where in the world the device is. The eyes flinch.'],
-  ['Replay connection attempts', 'Network failures and connection attempts line up: IPv6 and IPv4 are racing, and the race is latency-sensitive.'],
-  ['Read Node.js Happy Eyeballs', 'Into the runtime: the Happy Eyeballs implementation details explain who wins the race, and when.'],
-  ['Tune app timeouts', 'Application timeouts adjusted to match. A practical mitigation ships. The eyes close.'],
+  {
+    label: 'Trace the failing routes',
+    log: 'Only devices on slow, long-distance routes fail. On fast routes everything connects. The eyes flinch.',
+  },
+  {
+    label: 'Replay connection attempts',
+    log: 'IPv6 starts, and is cancelled when a short timer fires. Then IPv4 starts, and is cancelled too. They never race. Nothing connects.',
+    chart: 'node',
+  },
+  {
+    label: 'Read the Node.js source',
+    log: 'Found it. Node.js cancels each attempt on a timer before trying the next address. A real race keeps the first attempt going while the next one starts.',
+    chart: 'race',
+  },
+  {
+    label: 'Ship the mitigation',
+    log: 'Slow-but-healthy attempts are no longer cut off. Devices on slow routes connect again. The eyes close.',
+  },
 ];
 const BOSS_BUTTON_ORDER = [2, 0, 3, 1];
+
+// A timeline of connection attempts on a slow route, where a handshake takes 70% of the chart.
+// Lanes: [name, start %, end %, outcome, animation delay s]. 'cut' = cancelled, 'win' = connected, 'lose' = dropped after the other won.
+const CHARTS = {
+  node: {
+    caption: 'What Node.js did: one attempt at a time',
+    lanes: [['IPv6', 0, 30, 'cut', 0], ['IPv4', 30, 60, 'cut', 0.7]],
+    timer: [30, 60],
+    result: '✕ Nothing connects',
+  },
+  race: {
+    caption: 'A real Happy Eyeballs race',
+    lanes: [['IPv6', 0, 70, 'win', 0], ['IPv4', 30, 70, 'lose', 0.35]],
+    timer: [],
+    result: '✓ Connected over IPv6',
+  },
+};
+
+function chart(kind) {
+  const c = CHARTS[kind];
+  const fig = el('figure', `race race-${kind}`);
+  fig.append(el('figcaption', null, c.caption));
+  for (const [name, from, to, outcome, delay] of c.lanes) {
+    const lane = el('div', 'lane');
+    const track = el('span', 'track');
+    const bar = el('span', `bar ${outcome}`);
+    bar.style.cssText = `left:${from}%;width:${to - from}%;animation-delay:${delay}s`;
+    const mark = el('span', `mark ${outcome}`, outcome === 'cut' ? '✕' : outcome === 'win' ? '✓' : '');
+    mark.style.cssText = `left:${to}%;animation-delay:${delay + 0.6}s`;
+    for (const t of c.timer) {
+      const tick = el('span', 'tick');
+      tick.style.left = `${t}%`;
+      track.append(tick);
+    }
+    track.append(bar, mark);
+    lane.append(el('span', 'lane-name', name), track);
+    fig.append(lane);
+  }
+  const foot = el('p', 'race-foot');
+  foot.append(el('span', null, c.timer.length ? '┆ attempt timer' : 'IPv4 starts after a short delay; IPv6 keeps going'), el('span', `race-result ${c.timer.length ? 'is-fail' : 'is-ok'}`, c.result));
+  fig.append(foot);
+  fig.setAttribute('aria-label', `${c.caption}. ${c.result}.`);
+  return fig;
+}
+
 function boss(body) {
   if (game.bossDown) {
-    narrate(body, 'The Happy Eyeballs sleep. Production is quiet.');
-    cloneInto(body, '#ach-rca p');
+    narrate(body, 'The Happy Eyeballs sleep. Devices on slow routes connect again.');
+    body.append(
+      el('p', null, 'Root cause: Node.js was supposed to race IPv6 and IPv4. Instead it cancelled each connection attempt when a short timer fired, then tried the next address. On slow routes every attempt was cut off before it could connect.'),
+      chart('node'),
+      chart('race'),
+    );
     actions(body, [['Fight again', () => { game.bossDown = false; refreshDialog(); }]]);
     return;
   }
-  narrate(body, 'Devices fail to connect, but only sometimes, and only from some places. Two eyes race each other: IPv6 and IPv4. Find the root cause, in order.');
+  narrate(body, 'Some devices cannot connect at all, mostly on slow routes. The two eyes, IPv6 and IPv4, are meant to race each other. Are they? Investigate in order.');
   const hp = el('div', 'hp');
   const bar = el('span', 'hp-bar');
   const fill = el('span');
@@ -71,9 +158,10 @@ function boss(body) {
   bar.append(fill);
   hp.append(el('span', null, 'HP'), bar);
   const log = el('p', 'log', 'What do you check first?');
-  body.append(hp, log);
+  const charts = el('div', 'race-area');
+  body.append(hp, log, charts);
   let step = 0;
-  actions(body, BOSS_BUTTON_ORDER.map((i) => [BOSS_STEPS[i][0], (btn) => {
+  actions(body, BOSS_BUTTON_ORDER.map((i) => [BOSS_STEPS[i].label, (btn) => {
     if (i !== step) {
       log.textContent = 'The eyes blink at you. Not yet: what comes before that?';
       sfx('miss');
@@ -82,13 +170,14 @@ function boss(body) {
     step++;
     btn.disabled = true;
     fill.style.width = `${100 - (step / BOSS_STEPS.length) * 100}%`;
-    log.textContent = BOSS_STEPS[i][1];
+    log.textContent = BOSS_STEPS[i].log;
+    if (BOSS_STEPS[i].chart) charts.append(chart(BOSS_STEPS[i].chart));
     game.bossHit = world.T;
     sfx('hit');
     if (step === BOSS_STEPS.length) {
       game.bossDown = true;
       unlock('boss');
-      later(body, 1600, refreshDialog);
+      later(body, 2200, refreshDialog);
     }
   }]));
 }
@@ -133,14 +222,36 @@ function sands(body) {
   }]]);
 }
 
+// The bug bounty: Cleartrip let Flipkart coins be redeemed in any currency at face value,
+// so a coin meant to be worth ₹1 could be spent as $1, £1 or 1 Kuwaiti dinar.
+// Multipliers are rough, deliberately rounded down, since exchange rates move.
+const COIN_PAYMENTS = [
+  ['₹ INR', '₹100', 'Working as intended.'],
+  ['$ USD', '$100', 'That is over ₹8,000: about 80x what the coins are worth.'],
+  ['£ GBP', '£100', 'That is over ₹10,000: more than 100x what the coins are worth.'],
+  ['KD KWD', 'KD 100', 'That is over ₹25,000: more than 250x what the coins are worth.'],
+];
 function cave(body) {
-  if (!game.bugCaught) {
-    narrate(body, 'Something glitters deep in the cave, right in the middle of a payment flow.');
-    actions(body, [['Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); }]]);
+  if (game.bugCaught) {
+    narrate(body, 'Reported through HackerOne, validated and rewarded. The bug now lives on a plaque.');
+    cloneInto(body, '#security p');
     return;
   }
-  narrate(body, 'Reported, validated and rewarded. The bug now lives on a plaque.');
-  cloneInto(body, '#security p');
+  narrate(body, 'Something glitters in the cave: a Cleartrip checkout with 100 Flipkart coins in the wallet. Each coin is meant to be worth ₹1.');
+  body.append(el('p', 'meta', 'Pick a currency to pay in:'));
+  const log = el('p', 'log', '');
+  let reportShown = false;
+  const row = actions(body, COIN_PAYMENTS.map(([label, paid, note], i) => [`Pay in ${label}`, () => {
+    log.textContent = `100 coins → ${paid}. ${note}`;
+    sfx(i ? 'hit' : 'blip');
+    if (i && !reportShown) {
+      reportShown = true;
+      const report = button('Report it responsibly', () => { game.bugCaught = true; unlock('bug'); refreshDialog(); });
+      body.append(el('p', null, 'The coins keep their number but take on the new currency. Time to tell someone.'));
+      actions(body, []).append(report);
+    }
+  }]));
+  row.after(log);
 }
 
 const GREETINGS = [
@@ -174,7 +285,7 @@ function bonfire(body) {
 
 // Every place the hero stops. x is the world position; the dialog opens within RANGE of it.
 export const STOPS = [
-  { id: 'spark', x: 560, level: 'Level 1 · The Spark', title: 'Little Fighters 2', ach: 'spark', build: spark },
+  { id: 'spark', x: 560, level: 'Level 1 · The Spark', title: 'Little Fighters 2', build: spark },
   { id: 'school', x: 1005, level: 'Level 2 · SCMS Academy', title: text('#education h3'), build: school },
   {
     id: 'suyati', x: 1480, level: 'Level 3 · Suyati Lab · 2018–2020', title: text('#job-suyati h3'),
@@ -191,7 +302,7 @@ export const STOPS = [
   },
   { id: 'boss', x: 2895, level: 'Level 5 · Boss fight', title: 'The Happy Eyeballs', build: boss },
   { id: 'sands', x: 3150, level: 'Level 5 · Sands of Rollback', title: 'Rewind the job', build: sands },
-  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'Security research', build: cave },
+  { id: 'cave', x: 3450, level: 'Side quest · Bug Bounty Cave', title: 'The 100x coin bug', build: cave },
   ...shops.map((s) => ({
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),

@@ -15,11 +15,11 @@ export const world = {
 };
 
 export const ACH = [
-  ['spark', 'Found the spark'],
+  ['spark', 'Modded Little Fighters 2'],
   ['relic', 'Woke the GPT-2 relic'],
   ['boss', 'Defeated the Happy Eyeballs'],
   ['rewind', 'Rewound the sands'],
-  ['bug', 'Caught the bug'],
+  ['bug', 'Caught the 100x coin bug'],
   ['shopper', 'Visited every shop'],
   ['bonfire', 'Lit the bonfire'],
 ];
@@ -33,6 +33,7 @@ export const game = {
   lit: got.has('bonfire'),
   bossHit: -9, // world.T of the last hit, for screen shake
   rewindAt: -99, // world.T when the rewind started, for the hourglass
+  lf2Modded: false, // the Little Fighters 2 mod on the CRT
 };
 
 export function paintStars() {
