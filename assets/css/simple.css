@@ -1,0 +1,54 @@
+/* Simple view: the readable resume, also used for print. Loaded after base.css. */
+#simple { max-width: 780px; margin: 0 auto; padding: 48px 16px 64px; outline: none; }
+#simple h1 { font-family: var(--font-pixel); font-size: clamp(20px, 5vw, 30px); line-height: 1.35; margin: 6px 0 8px; letter-spacing: .5px; }
+#simple h2 {
+  font-family: var(--font-pixel); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+  margin: 48px 0 16px; padding-bottom: 10px; border-bottom: 3px solid var(--text);
+}
+#simple h3 { font-size: 1.05rem; margin: 22px 0 6px; }
+#simple h4 { margin: 0 0 4px; font-size: 1rem; }
+.kicker { margin: 0; color: var(--accent); font-weight: 600; }
+.muted, .meta { color: var(--muted); }
+.meta { margin: 0 0 8px; font-size: .95rem; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 0 22px; }
+.actions { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 3px; }
+.btn-plain { background: none; border: 2px solid var(--border); color: var(--text); padding: 8px 14px; cursor: pointer; }
+.btn-plain:hover { border-color: var(--text); }
+.interests, .games { padding-left: 20px; }
+.interests li, .games li { margin: 0 0 8px; }
+.games span { color: var(--muted); }
+.job { margin: 0 0 28px; }
+.job ul { padding-left: 20px; }
+.job li { margin: 0 0 6px; }
+.org { color: var(--accent); }
+#achievements article h3 { margin-top: 18px; }
+#achievements p { margin: 0; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+.chip { border: 2px solid var(--border); background: var(--chip); color: var(--text); padding: 4px 12px; cursor: pointer; font-size: .9rem; }
+.chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.projects { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; }
+.project { background: var(--card); border: 2px solid var(--border); padding: 16px 18px; box-shadow: 4px 4px 0 var(--border); }
+.project h3 { margin: 0 0 6px !important; }
+.project p { margin: 0 0 8px; }
+.project[hidden] { display: none; }
+.tags { color: var(--muted); font-size: .9rem; }
+.plinks { display: flex; gap: 16px; margin: 0 !important; font-weight: 600; }
+.projects.small { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.projects.small .project { padding: 12px 14px; box-shadow: none; }
+.projects.small p { margin: 0; font-size: .92rem; color: var(--muted); }
+.skill-group ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.skill-group li { background: var(--chip); padding: 3px 10px; font-size: .92rem; }
+.foot { margin-top: 56px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--muted); font-size: .92rem; }
+
+/* ---------- Print: always the simple view ---------- */
+@media print {
+  #story, .skip, .actions, .filters { display: none !important; }
+  #simple { display: block !important; padding: 0; max-width: none; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  #simple h2 { margin-top: 20px; border-bottom-width: 1px; }
+  .project { box-shadow: none; break-inside: avoid; }
+  .project[hidden] { display: block !important; }
+  .job { break-inside: avoid-page; }
+  a { color: #000; }
+}
