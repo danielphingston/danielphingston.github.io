@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog · Daniel Phingston</title>
+<meta name="description" content="Field notes from Daniel Phingston on backend systems, Linux and debugging problems down to the root cause.">
+<link rel="canonical" href="https://danielphingston.github.io/blog/">
+<meta name="theme-color" content="#1b1b2f">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blog · Daniel Phingston">
+<meta property="og:description" content="Field notes on backend systems, Linux and debugging problems down to the root cause.">
+<meta property="og:url" content="https://danielphingston.github.io/blog/">
+<meta property="og:image" content="https://danielphingston.github.io/assets/og.png">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/simple.css">
+</head>
+<body>
+<main id="simple">
+  <header class="intro">
+    <p class="kicker"><a href="/">Daniel Phingston</a></p>
+    <h1>Blog</h1>
+    <p class="muted">Field notes on backend systems, Linux and debugging problems down to the root cause.</p>
+    <nav class="links" aria-label="Site">
+      <a href="/">Home</a>
+      <a href="/?view=simple">Resume</a>
+      <a href="https://github.com/danielphingston">GitHub</a>
+      <a href="https://www.linkedin.com/in/danielphingston">LinkedIn</a>
+    </nav>
+  </header>
+
+  <section aria-labelledby="posts-h">
+    <h2 id="posts-h">Posts</h2>
+    <ul class="projects">
+      <li class="project">
+        <p class="tags"><time datetime="2026-11-06">6 November 2026</time> · Hyper-V · Linux kernel</p>
+        <h3><a href="/blog/hyper-v-memory-reclaim/">Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM</a></h3>
+        <p>My Linux VM asked Hyper-V for 20.9 GB. It was using 4. Dynamic Memory was on, and the Ubuntu VM still held all 12 GB. The Linux balloon driver reports reserved memory as demand. A 100-line kretprobe module reports real use instead, and the VM now settles near 6.8 GB.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <p><a href="/">← Back to the home page</a></p>
+  </footer>
+</main>
+</body>
+</html>

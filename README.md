@@ -45,6 +45,17 @@ assets/js/story/
   nav.js                   Converts between page scroll and the hero's position
 ```
 
+## Blog
+
+Posts are plain HTML pages, with no build step:
+
+```
+blog/index.html                      List of posts (styled with base.css + simple.css)
+blog/<slug>/index.html               One post, with its own post.css / post.js beside it
+```
+
+To add a post, create `blog/<slug>/index.html`, add a card to `blog/index.html` and a URL to `sitemap.xml`.
+
 ## Common changes
 
 **Update the resume.** Edit the simple view in `index.html`. Story dialogs clone the job bullets, achievements, education and skills from it, so there is nothing to change in the JavaScript.
