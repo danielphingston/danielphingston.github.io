@@ -15,7 +15,7 @@ const SKY = [
   { x: 3180, top: '#5a9ad0', bot: '#f2d49b', stars: 0, sun: 0.7 }, // desert
   { x: 3480, top: '#5b4a8a', bot: '#e89a6a', stars: 0.1, sun: 0.35 },
   { x: 4100, top: '#2d2457', bot: '#e3735e', stars: 0.3, sun: 0.12 },
-  { x: 4650, top: '#100d26', bot: '#36284e', stars: 1, sun: -1 }, // bonfire night
+  { x: 4895, top: '#100d26', bot: '#36284e', stars: 1, sun: -1 }, // bonfire night
 ];
 
 export function skyAt(x) {

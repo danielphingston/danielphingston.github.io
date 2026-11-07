@@ -44,6 +44,8 @@
 .projects.small { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; }
 .projects.small .project { padding: 12px 14px; box-shadow: none; }
 .projects.small p { margin: 0; font-size: .92rem; color: var(--muted); }
+.posts { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.posts a { font-weight: 600; }
 .skill-group ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .skill-group li { background: var(--chip); padding: 3px 10px; font-size: .92rem; }
 .foot { margin-top: 56px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--muted); font-size: .92rem; }

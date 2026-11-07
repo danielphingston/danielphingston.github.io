@@ -8,7 +8,7 @@ import { walkTo } from './nav.js';
 import { setView } from '../view.js';
 import { openPanel } from './panels.js';
 import { shops } from './shops.js';
-import { QUEST_BOARD_X } from './scenes.js';
+import { QUEST_BOARD_X, SCRIBE_X } from './scenes.js';
 import { narrate, cloneInto, actions, button, later, refreshDialog } from './dialog.js';
 
 function job(selector, line) {
@@ -240,7 +240,7 @@ const GREETINGS = [
   'Everything here stays on your device.',
   'Mind the tests on your way in.',
   'Pick a tool, any tool.',
-  'Last shop before the bonfire.',
+  'The scribe next door writes things down.',
 ];
 function shop(s) {
   return (body) => {
@@ -255,6 +255,14 @@ function questBoard(body) {
   narrate(body, 'A notice board by the gate. One poster is fresher than the rest: "Adventurer available for hire."');
   cloneInto(body, '#freelance ul');
   cloneInto(body, '#freelance .cta');
+}
+
+// The blog: a scribe's house between Workshop Row and the bonfire. Posts are listed in #writing.
+function scribe(body) {
+  narrate(body, 'The town scribe keeps notes from quests that went deeper than planned.');
+  cloneInto(body, '#writing ul');
+  cloneInto(body, '#writing .more');
+  unlock('scribe');
 }
 
 function bonfire(body) {
@@ -298,7 +306,8 @@ export const STOPS = [
   ...shops.map((s) => ({
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),
-  { id: 'bonfire', x: 4660, level: 'Final · Bonfire', title: 'Bonfire lit', build: bonfire },
+  { id: 'scribe', x: SCRIBE_X, level: "Level 6 · The scribe's house", title: 'Field notes', build: scribe },
+  { id: 'bonfire', x: 4905, level: 'Final · Bonfire', title: 'Bonfire lit', build: bonfire },
 ];
 
 // Named areas for the HUD and the map: [name, world x where it starts].
@@ -311,5 +320,6 @@ export const LEVELS = [
   ['Cambium Citadel', 2580],
   ['Bug Bounty Cave', 3450],
   ['Workshop Row', QUEST_BOARD_X],
-  ['Bonfire', 4660],
+  ['The Scribe', SCRIBE_X],
+  ['Bonfire', 4905],
 ];

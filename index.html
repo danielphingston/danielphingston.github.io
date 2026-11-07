@@ -13,6 +13,7 @@
 <meta property="og:url" content="https://danielphingston.github.io/">
 <meta property="og:image" content="https://danielphingston.github.io/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" type="application/atom+xml" title="Daniel Phingston · Blog" href="https://danielphingston.github.io/blog/feed.xml">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -247,6 +248,12 @@
         <p class="tags">JavaScript · localStorage · Playwright visual tests</p>
         <p class="plinks"><a href="/resume-builder/">Live</a><a href="https://github.com/danielphingston/resume-builder">Source</a></p>
       </li>
+      <li class="project" id="p-metro" data-tags="live" data-shop="METRO" data-color="#1ba1e2">
+        <h3>Metro Launcher</h3>
+        <p>A Windows Phone style home screen for Android 12 and later: live tiles, folders, photo backgrounds and turnstile animations, built to use almost no battery. Search finds apps by initials or with typos, and makes no network requests while you type.</p>
+        <p class="tags">Kotlin · Jetpack Compose · Android</p>
+        <p class="plinks"><a href="https://play.google.com/store/apps/details?id=io.github.danielphingston.metro">Google Play</a><a href="/metro-launcher/">Site</a><a href="https://github.com/danielphingston/metro-launcher">Source</a></p>
+      </li>
       <li class="project" id="p-saveknot" data-tags="local gaming" data-shop="SAVEKNOT" data-color="#81b29a">
         <h3>SaveKnot</h3>
         <p>Tiny local-first game-save daemon. Finds saves with the Ludusavi manifest, watches them, takes content-addressed zstd snapshots and syncs straight to your own Cloudflare R2 bucket. No account, no hosted backend.</p>
@@ -293,6 +300,14 @@
       <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/docker-health-check-node">docker-health-check-node</a></h4><p>Health-checks Docker services before starting, in Node.</p></li>
       <li class="project" data-tags="lib"><h4><a href="https://github.com/danielphingston/covid-center-watch">covid-center-watch</a></h4><p>2021: watched vaccination centres for open slots and emailed alerts (Vue + AWS Lambda).</p></li>
     </ul>
+  </section>
+
+  <section id="writing" aria-labelledby="writing-h">
+    <h2 id="writing-h">Writing</h2>
+    <ul class="posts">
+      <li><a href="blog/hyper-v-memory-reclaim/">Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM</a> <span class="muted">· <time datetime="2026-11-06">Nov 2026</time></span><br><span class="muted">A Linux VM asked Hyper-V for 20.9 GB while using 4. Why, and a 100-line kernel module that fixes it.</span></li>
+    </ul>
+    <p class="more"><a href="blog/">All posts →</a></p>
   </section>
 
   <section id="skills" aria-labelledby="skills-h">
