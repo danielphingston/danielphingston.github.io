@@ -429,7 +429,7 @@ function questBoard() {
 
 /* ---------- The scribe: the blog ---------- */
 
-export const SCRIBE_X = 4600;
+export const SCRIBE_X = 4705;
 
 function scribe() {
   const { GY, cam, T } = world;
@@ -470,7 +470,7 @@ function scribe() {
 
 function bonfire() {
   const { GY, cam } = world;
-  const x = 4824 - cam; // the fire sits just right of the stop, so the hero can sit beside it
+  const x = 4929 - cam; // the fire sits just right of the stop, so the hero can sit beside it
   for (let k = 0; k < 6; k++) R(x - 11 + k * 4, GY - 2, 3, 2, '#6c6a7a');
   R(x - 8, GY - 4, 16, 2, '#4a3a2a');
   R(x - 7, GY - 6, 3, 2, '#6b4a2a');
@@ -522,7 +522,7 @@ export const SCENES = [
   [3100, 3240, sands],
   [3400, 3540, cave],
   [3580, 3680, questBoard],
-  [3690, 4480, workshopRow],
-  [4540, 4660, scribe],
-  [4780, 4900, bonfire],
+  [3690, 4585, workshopRow],
+  [4645, 4765, scribe],
+  [4885, 5005, bonfire],
 ];

@@ -307,7 +307,7 @@ export const STOPS = [
     id: `shop-${s.i}`, x: s.x, level: `Level 6 · Workshop Row · ${s.i + 1}/${shops.length}`, title: s.title, build: shop(s),
   })),
   { id: 'scribe', x: SCRIBE_X, level: "Level 6 · The scribe's house", title: 'Field notes', build: scribe },
-  { id: 'bonfire', x: 4800, level: 'Final · Bonfire', title: 'Bonfire lit', build: bonfire },
+  { id: 'bonfire', x: 4905, level: 'Final · Bonfire', title: 'Bonfire lit', build: bonfire },
 ];
 
 // Named areas for the HUD and the map: [name, world x where it starts].
@@ -321,5 +321,5 @@ export const LEVELS = [
   ['Bug Bounty Cave', 3450],
   ['Workshop Row', QUEST_BOARD_X],
   ['The Scribe', SCRIBE_X],
-  ['Bonfire', 4800],
+  ['Bonfire', 4905],
 ];
