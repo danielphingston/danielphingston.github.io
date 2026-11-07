@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Daniel Phingston · Blog</title>
+  <subtitle>Field notes on backend systems, Linux and debugging problems down to the root cause.</subtitle>
+  <link href="https://danielphingston.github.io/blog/feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://danielphingston.github.io/blog/" rel="alternate" type="text/html"/>
+  <id>https://danielphingston.github.io/blog/</id>
+  <updated>2026-11-07T00:00:00Z</updated>
+  <author><name>Daniel Phingston</name><uri>https://danielphingston.github.io/</uri></author>
+  <entry>
+    <title>Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM</title>
+    <link href="https://danielphingston.github.io/blog/hyper-v-memory-reclaim/" rel="alternate" type="text/html"/>
+    <id>https://danielphingston.github.io/blog/hyper-v-memory-reclaim/</id>
+    <published>2026-11-06T00:00:00Z</published>
+    <updated>2026-11-07T00:00:00Z</updated>
+    <summary>Why does a Linux VM's RAM stay at the maximum with Hyper-V Dynamic Memory? The Linux balloon driver reports Committed_AS as demand. A small kretprobe module reports real use instead, and the VM settles near 6.8 GB.</summary>
+  </entry>
+</feed>

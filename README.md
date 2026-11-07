@@ -54,7 +54,7 @@ blog/index.html                      List of posts (styled with base.css + simpl
 blog/<slug>/index.html               One post, with its own post.css / post.js beside it
 ```
 
-To add a post, create `blog/<slug>/index.html`, add a card to `blog/index.html` and a URL to `sitemap.xml`.
+To add a post, create `blog/<slug>/index.html`, then list it in three places: a card in `blog/index.html`, an item in the home page's `#writing` section (story mode's scribe reads it from there) a URL in `sitemap.xml` (update its `<lastmod>`), and an `<entry>` in `blog/feed.xml`.
 
 ## Common changes
 
@@ -62,7 +62,7 @@ To add a post, create `blog/<slug>/index.html`, add a card to `blog/index.html` 
 
 **Freelance details.** Edit the `#freelance` section near the top of the simple view. The quest board on Workshop Row and the bonfire reuse its list and its email button. Email links take `data-subject` (pre-filled subject) and `data-label` (link text).
 
-**Add a project.** Add an `<li class="project">` to `#project-list` with `data-tags` (for the filters), `data-shop` (a short uppercase sign name) and `data-color`. It gets its own shop on Workshop Row automatically. If the row grows past about eight shops, move the bonfire further right (`END` and `WORLD` in `config.js`, the bonfire stop in `content.js` and its scene in `scenes.js`).
+**Add a project.** Add an `<li class="project">` to `#project-list` with `data-tags` (for the filters), `data-shop` (a short uppercase sign name) and `data-color`. It gets its own shop on Workshop Row automatically. The scribe's house (the blog) stands right after the row, so past seven shops move it and the bonfire further right (`SCRIBE_X` in `scenes.js`, `END` and `WORLD` in `config.js`, the bonfire stop in `content.js` and its scene in `scenes.js`).
 
 **Add a place to story mode.**
 1. Draw it: write a function in `scenes.js` and add `[firstX, lastX, fn]` to `SCENES`.

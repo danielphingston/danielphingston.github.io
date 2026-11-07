@@ -427,11 +427,50 @@ function questBoard() {
   sign('HIRE ME', x, GY - 57, OL, '#f2cc8f');
 }
 
+/* ---------- The scribe: the blog ---------- */
+
+export const SCRIBE_X = 4600;
+
+function scribe() {
+  const { GY, cam, T } = world;
+  const b = SCRIBE_X - 34 - cam;
+  const read = game.got.has('scribe');
+  // A narrow stone house with a pointed roof
+  box(b, GY - 50, 68, 50, '#d9cdb4');
+  for (let k = 0; k < 4; k++) R(b + 2, GY - 44 + k * 11, 64, 1, '#c4b697'); // stone courses
+  roof(b - 4, GY - 51, 76, 12, '#3d5a80', '#2b4060');
+  R(b + 30, GY - 66, 8, 16, '#3d5a80'); // gable
+  R(b + 32, GY - 64, 4, 4, windowColor());
+  // Bookshelf window
+  box(b + 6, GY - 32, 30, 22, '#6b4a2a');
+  const spines = ['#e07a5f', '#81b29a', '#f2cc8f', '#3d5a80', '#9b5de5', '#e63946', '#f4f1de'];
+  for (let row = 0; row < 2; row++) {
+    for (let k = 0; k < 7; k++) {
+      const h = 7 - ((k + row) % 3);
+      R(b + 8 + k * 4, GY - 31 + row * 10 + (8 - h), 3, h, spines[(k + row * 3) % spines.length]);
+    }
+    R(b + 7, GY - 22 + row * 10, 28, 1, '#4a2c1a');
+  }
+  // Door with an open scroll pinned to it
+  box(b + 44, GY - 26, 16, 26, '#4a2c1a');
+  R(b + 46, GY - 22, 12, 9, '#f4f1de');
+  for (let k = 0; k < 3; k++) R(b + 47, GY - 20 + k * 2, 10 - (k % 2) * 3, 1, '#a89f86');
+  R(b + 57, GY - 11, 2, 2, '#f2cc8f');
+  // A quill swaying in an inkpot on the sill
+  const sway = motion.reduced ? 0 : Math.round(Math.sin(T * 2));
+  R(b + 38, GY - 12, 4, 3, OL);
+  R(b + 40 + sway, GY - 20, 1, 8, '#f4f1de');
+  R(b + 41 + sway, GY - 20, 2, 4, '#f4f1de');
+  sign('BLOG', b + 34, GY - 77, OL, read ? '#f2cc8f' : '#f4f1de');
+  R(b + 64, GY - 27, 3, 4, '#ffd36e');
+  if (isNight()) alpha(0.25, () => disc(b + 65, GY - 25, 5, '#ffd36e'));
+}
+
 /* ---------- Finale: the bonfire and the save crystal ---------- */
 
 function bonfire() {
   const { GY, cam } = world;
-  const x = 4684 - cam; // the fire sits just right of the stop, so the hero can sit beside it
+  const x = 4824 - cam; // the fire sits just right of the stop, so the hero can sit beside it
   for (let k = 0; k < 6; k++) R(x - 11 + k * 4, GY - 2, 3, 2, '#6c6a7a');
   R(x - 8, GY - 4, 16, 2, '#4a3a2a');
   R(x - 7, GY - 6, 3, 2, '#6b4a2a');
@@ -484,5 +523,6 @@ export const SCENES = [
   [3400, 3540, cave],
   [3580, 3680, questBoard],
   [3690, 4480, workshopRow],
-  [4640, 4760, bonfire],
+  [4540, 4660, scribe],
+  [4780, 4900, bonfire],
 ];

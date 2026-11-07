@@ -21,6 +21,7 @@ export const ACH = [
   ['rewind', 'Rewound the sands'],
   ['bug', 'Caught the payment bug'],
   ['shopper', 'Visited every shop'],
+  ['scribe', "Read the scribe's notes"],
   ['bonfire', 'Lit the bonfire'],
 ];
 
