@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM · Daniel Phingston</title>
+<meta name="description" content="Why does a Linux VM's RAM stay at the maximum with Hyper-V Dynamic Memory? The Linux balloon driver reports Committed_AS as demand. A small kretprobe module reports real use instead, and the VM settles near 6.8 GB.">
+<link rel="canonical" href="https://danielphingston.github.io/blog/hyper-v-memory-reclaim/">
+<meta name="author" content="Daniel Phingston">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM">
+<meta property="og:description" content="Why does a Linux VM's RAM stay at the maximum with Hyper-V Dynamic Memory? The Linux balloon driver reports Committed_AS as demand. A small kretprobe module reports real use instead, and the VM settles near 6.8 GB.">
+<meta property="og:url" content="https://danielphingston.github.io/blog/hyper-v-memory-reclaim/">
+<meta property="og:image" content="https://danielphingston.github.io/assets/og.png">
+<meta property="article:published_time" content="2026-11-06">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600;700&family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="post.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Stuck at max: why Hyper-V Dynamic Memory won't let go of Linux RAM",
+  "description": "Why does a Linux VM's RAM stay at the maximum with Hyper-V Dynamic Memory? The Linux balloon driver reports Committed_AS as demand. A small kretprobe module reports real use instead, and the VM settles near 6.8 GB.",
+  "datePublished": "2026-11-06",
+  "author": { "@type": "Person", "name": "Daniel Phingston", "url": "https://danielphingston.github.io/" },
+  "mainEntityOfPage": "https://danielphingston.github.io/blog/hyper-v-memory-reclaim/",
+  "image": "https://danielphingston.github.io/assets/og.png",
+  "keywords": ["Hyper-V", "Dynamic Memory", "Linux kernel", "hv_balloon", "kretprobe", "Ubuntu"]
+}
+</script>
+<script src="post.js" defer></script>
+</head>
+<body>
+
+<header class="wide masthead">
+  <a class="mark" href="/">Daniel Phingston</a>
+  <nav aria-label="Site">
+    <a href="/blog/">Blog</a>
+    <a href="/?view=simple">Resume</a>
+    <a href="https://github.com/danielphingston">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<div class="wide hero">
+  <span class="label">Hyper-V &middot; Linux kernel &middot; Dynamic Memory</span>
+  <h1>Stuck at max: why <span class="nowrap">Hyper-V</span> Dynamic Memory won't let go of Linux RAM</h1>
+  <p class="sub">My Linux VM asked Hyper-V for 20.9 GB. It was using 4.</p>
+  <p class="dek">Hyper-V Dynamic Memory was switched on for our Ubuntu dev VM, and it still held all 12 GB around the clock. The cause is a single figure the Linux balloon driver sends to the host once a second. A small kernel module changes that figure, and the VM now settles near 6.8 GB with room to grow back to 12 GB when it needs to.</p>
+  <div class="byline">
+    <span><b><a href="/">Daniel Phingston</a></b></span>
+    <span><time datetime="2026-11-06">6 November 2026</time></span>
+    <span>Ubuntu 22.04 &middot; kernel 6.8.0-1063-azure &middot; Windows 11 Hyper-V</span>
+  </div>
+  <p class="notice"><b>Heads up:</b> most of the code here was written with Claude, an AI assistant, and tested on one VM. It runs as root and loads code into the kernel. Read the <a href="#disclaimer">disclaimer</a> before you run anything.</p>
+
+  <div class="figure" aria-label="Animated view of host memory as the VM releases RAM">
+    <div class="fig-head">
+      <h3>Laptop RAM, 31.5 GB</h3>
+      <span class="label" id="heroState">Before: VM holds 12.0 GB</span>
+    </div>
+    <div class="ram">
+      <div class="seg win" id="segWin" style="width:48.6%">Windows and apps</div>
+      <div class="seg vm" id="segVm" style="width:38.1%">Linux VM</div>
+      <div class="seg free" id="segFree">free</div>
+    </div>
+    <div class="legend">
+      <div><span class="k"><span class="swatch" style="background:var(--host)"></span>Windows and apps</span><span class="v num">15.3 GB</span></div>
+      <div><span class="k"><span class="swatch" style="background:var(--assigned)"></span>Assigned to the VM</span><span class="v vmc num" id="vmVal">12.0 GB</span></div>
+      <div><span class="k"><span class="swatch" style="background:var(--ok)"></span>Free for Windows</span><span class="v freec num" id="freeVal">4.2 GB</span></div>
+    </div>
+  </div>
+</div>
+
+<article>
+
+<section>
+  <div class="col">
+    <span class="label">The symptom</span>
+    <h2>A 12 GB VM using about 4 GB</h2>
+    <p>The laptop has 31.5 GB of RAM, and Task Manager sat at 86% in use. Inside the VM, <code>htop</code> showed 4.16 GB used out of 11.7 GB, with most of the rest held as page cache. Hyper-V had all 12 GB assigned, marked the VM's memory status as <b>Warning</b>, and reported a demand of <span class="hot">20.9 GB</span>.</p>
+    <p>That demand figure was the clue. The VM was using about 4 GB, and Hyper-V believed it needed 20.9 GB, well above its 12 GB maximum.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Root cause</span>
+    <h2>The guest reports reserved memory as demand</h2>
+    <p>Hyper-V sizes a Dynamic Memory VM from a status report the guest sends every second. Windows guests fill that report with their commit charge, which tracks memory in use closely. The Linux driver, <code>hv_balloon</code>, was written in 2012 to speak the same protocol, and it fills the committed field from <code>Committed_AS</code>.</p>
+    <p><code>Committed_AS</code> counts address space that processes have reserved. Databases, Go services, the JVM, Node and Docker all reserve far more than they touch. On this VM, ClickHouse alone accounted for about 6.4 GB of the reservation.</p>
+  </div>
+  <div class="col bars" role="img" aria-label="Reserved memory 20.1 GB, used memory about 4.0 GB, page cache 7.2 GB, against a 12 GB maximum">
+    <div class="bar-row">
+      <div class="name">Committed_AS<small>reserved by processes</small></div>
+      <div class="track"><div class="fill shimmer" style="width:96%;background:var(--demand)"></div><div class="maxline" style="left:57.4%"><span>12 GB max</span></div></div>
+      <div class="val num">20.1 GB</div>
+    </div>
+    <div class="bar-row">
+      <div class="name">Page cache<small>reclaimable on demand</small></div>
+      <div class="track"><div class="fill" style="width:34.4%;background:var(--assigned-2)"></div><div class="maxline" style="left:57.4%"></div></div>
+      <div class="val num">7.2 GB</div>
+    </div>
+    <div class="bar-row">
+      <div class="name">Used<small>what the VM needs</small></div>
+      <div class="track"><div class="fill" style="width:19.1%;background:var(--ok)"></div><div class="maxline" style="left:57.4%"></div></div>
+      <div class="val num">4.0 GB</div>
+    </div>
+  </div>
+  <div class="col">
+    <pre><code><span class="c-com">/* drivers/hv/hv_balloon.c: the figure sent to Hyper-V as "committed" */</span>
+<span class="c-kw">static unsigned long</span> get_pages_committed(<span class="c-kw">struct</span> hv_dynmem_device *dm)
+{
+	<span class="c-kw">return</span> <span class="c-hl">vm_memory_committed()</span> +          <span class="c-com">/* Committed_AS: 20.1 GB here */</span>
+		dm-&gt;num_pages_ballooned +
+		(dm-&gt;num_pages_added &gt; dm-&gt;num_pages_onlined ?
+		 dm-&gt;num_pages_added - dm-&gt;num_pages_onlined : 0) +
+		compute_balloon_floor();            <span class="c-com">/* about 0.8 GB at 12 GB */</span>
+}</code></pre>
+    <p class="codecap">Mainline Linux still uses this formula. Upgrading Ubuntu or the kernel leaves the behaviour unchanged.</p>
+    <p>With demand permanently above the 12 GB maximum, Hyper-V never sees spare memory in the VM, so it never asks the balloon driver to give any back.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Dead ends</span>
+    <h2>Every host-side setting we tried</h2>
+    <p>The VM had to stay up throughout, so each attempt was made against the running machine.</p>
+  </div>
+  <div class="col tablewrap">
+    <table>
+      <thead><tr><th>Attempt</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Lower the maximum to 8 GB</td><td><span class="x">Refused</span>The maximum cannot go below the 12 GB startup value.</td></tr>
+        <tr><td>Lower startup memory to 8 GB</td><td><span class="x">Refused</span>Startup memory is fixed while the VM runs with Dynamic Memory.</td></tr>
+        <tr><td>Lower the maximum after a reboot with 4 GB startup</td><td><span class="x">Refused</span>While the VM runs, Hyper-V only allows the maximum to increase.</td></tr>
+        <tr><td>Free page reporting (cold discard hints)</td><td><span class="x">Absent</span>The kernel supports it. Windows 11 client Hyper-V does not offer the capability to this VM.</td></tr>
+        <tr><td>Drop the page cache in the guest</td><td><span class="x">No effect</span>Page cache was never part of the reported demand.</td></tr>
+        <tr><td>Leave the memory settings out of the Vagrant config</td><td><span class="x">Worse</span>Vagrant passes 0 and switches the VM to static 4 GB.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">The fix</span>
+    <h2>Swap one term in the status report</h2>
+    <p><code>hv_demand</code> is a kernel module of about 100 lines. It leaves <code>hv_balloon</code> in place and uses kretprobes to change the value of a single function call, at the moment the driver builds its report. Use the toggle to compare the two reports.</p>
+  </div>
+
+  <div class="wide flow" id="flow" data-mode="stock">
+    <div class="toggle" role="group" aria-label="Choose the driver behaviour">
+      <button type="button" id="modeStock" aria-pressed="true">Stock driver</button>
+      <button type="button" id="modeModule" aria-pressed="false">With hv_demand</button>
+    </div>
+    <div class="flow-grid">
+      <div class="box">
+        <h3>Ubuntu guest <span class="label">once per second</span></h3>
+        <div class="call"><span>post_status()</span><span class="ret">builds report</span></div>
+        <div class="call"><span>get_pages_committed()</span><span class="ret">sums terms</span></div>
+        <div class="call" id="callVmc"><span>vm_memory_committed()</span><span class="ret num" id="vmcRet">20.1 GB</span></div>
+        <div class="call probe" id="probeRow" hidden><span>hv_demand kretprobe</span><span class="num">3.9 used + 1.0 cushion</span></div>
+      </div>
+      <div class="wire" aria-hidden="true">
+        <span class="packet num" id="packet">20.9 GB</span>
+        <span class="cap">DM_STATUS_REPORT</span>
+      </div>
+      <div class="box">
+        <h3>Hyper-V host <span class="pill warn" id="statusPill">Warning</span></h3>
+        <div class="kv"><span>Demand</span><b id="hostDemand">20.9 GB</b></div>
+        <div class="kv"><span>Assigned</span><b id="hostAssigned">12.0 GB</b></div>
+        <div class="meter" aria-hidden="true"><i id="hostMeter" style="width:100%"></i></div>
+        <div class="kv"><span class="muted">min 4 GB</span><span class="muted">max 12 GB</span></div>
+      </div>
+    </div>
+    <p class="flow-note" id="flowNote">Stock driver: demand sits above the maximum, so Hyper-V keeps the VM at 12 GB.</p>
+  </div>
+
+  <div class="col">
+    <ol class="steps">
+      <li><div>A kretprobe on <code>post_status()</code> records which task is building the report, and clears the record when the function returns.</div></li>
+      <li><div>A kretprobe on <code>vm_memory_committed()</code> checks the calling task. For calls from <code>post_status()</code>, it replaces the return value with <code>MemTotal &minus; MemAvailable + cushion_mb</code>.</div></li>
+      <li><div>The driver adds ballooned pages and its floor as usual, then sends the report. Hyper-V sees about 5.8 GB of demand and starts to reclaim.</div></li>
+    </ol>
+    <pre><code><span class="c-kw">static int</span> vmc_return(<span class="c-kw">struct</span> kretprobe_instance *ri, <span class="c-kw">struct</span> pt_regs *regs)
+{
+	<span class="c-kw">long</span> total, avail, used;
+
+	<span class="c-kw">if</span> (!READ_ONCE(enabled) || READ_ONCE(ps_task) != current)
+		<span class="c-kw">return</span> 0;                      <span class="c-com">/* every other caller keeps Committed_AS */</span>
+
+	total = (<span class="c-kw">long</span>)totalram_pages();
+	avail = si_mem_available();
+	used = total - avail;
+	<span class="c-kw">if</span> (used &lt; 0)
+		used = 0;
+	used += (<span class="c-kw">long</span>)READ_ONCE(cushion_mb) &lt;&lt; (20 - PAGE_SHIFT);
+
+	<span class="c-ok">regs_set_return_value(regs, (unsigned long)used);</span>
+	<span class="c-kw">return</span> 0;
+}</code></pre>
+    <p class="codecap"><code>/proc/meminfo</code> and the kernel's overcommit checks still read the real <code>Committed_AS</code>. Running <code>rmmod hv_demand</code> restores the stock report immediately.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Results</span>
+    <h2>12 GB down to 6.8 GB in about five minutes</h2>
+    <p>The module was loaded on the running VM after a Standard checkpoint. Hyper-V picked up the new demand within a second, waited a few minutes, then inflated the balloon in two steps. Assigned memory has tracked demand plus the 20% buffer since then.</p>
+  </div>
+  <div class="wide stats">
+    <div class="stat"><span class="big">12.0 &rarr; <em>6.8</em></span><span class="k">GB assigned to the VM</span></div>
+    <div class="stat"><span class="big">~5.2 GB</span><span class="k">returned to Windows</span></div>
+    <div class="stat"><span class="big">19.4 &rarr; <em>5.5</em></span><span class="k">GB demand seen by Hyper-V</span></div>
+    <div class="stat"><span class="big">~5 min</span><span class="k">from loading the module to the first reclaim</span></div>
+  </div>
+  <div class="wide chart">
+    <div class="chart-head">
+      <div class="chart-legend">
+        <span><i style="background:var(--assigned)"></i>Assigned</span>
+        <span><i style="background:var(--demand)"></i>Demand</span>
+        <span><i style="background:var(--muted);height:1px"></i>Min and max</span>
+      </div>
+      <button type="button" class="replay" id="replay">Replay</button>
+    </div>
+    <div class="chart-scroll"><svg id="chartSvg" viewBox="0 0 760 330" role="img" aria-label="Line chart: demand drops from 19.4 GB to about 5.7 GB when the module loads near 12:38; assigned memory holds at 12 GB until 12:42:04, drops to 7.83 GB at 12:42:34 and settles between 6.6 and 6.9 GB."></svg></div>
+    <p class="codecap">Samples from <code>Get-VM</code> on the host. Samples before 12:41:34 come from a 10-second poll whose exact start time was not logged, so their times are approximate.</p>
+  </div>
+  <div class="col">
+    <p>The VM stayed healthy throughout. Used memory held at about 3.6 GB, page cache shrank from 4.5 GB to 2.7 GB, 2.8 GB stayed available to programs, and the kernel log showed no out-of-memory kills.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Growth test</span>
+    <h2>Hyper-V gives the memory back when the VM needs it</h2>
+    <p>Shrinking is half the job. To check the other direction, a test process in the guest took 4 GB in 256 MB steps, held it for a minute, then let go. It was marked as the first process the kernel would kill under pressure, and it would stop growing if available memory stayed below 1 GB for 30 seconds. It never needed to.</p>
+  </div>
+  <div class="wide stats">
+    <div class="stat"><span class="big">~5 s</span><span class="k">until Hyper-V started adding memory</span></div>
+    <div class="stat"><span class="big">6.4 &rarr; <em>11.7</em></span><span class="k">GB assigned while the test held 4 GB</span></div>
+    <div class="stat"><span class="big">1.0 GB</span><span class="k">lowest available memory in the guest</span></div>
+    <div class="stat"><span class="big">0</span><span class="k">out-of-memory kills or service restarts</span></div>
+  </div>
+  <div class="wide chart">
+    <div class="chart-head">
+      <div class="chart-legend">
+        <span><i style="background:var(--assigned)"></i>Assigned</span>
+        <span><i style="background:var(--demand)"></i>Demand</span>
+        <span><i style="background:var(--muted);height:1px"></i>Min and max</span>
+      </div>
+      <button type="button" class="replay" id="replay2">Replay</button>
+    </div>
+    <div class="chart-scroll"><svg id="growthSvg" viewBox="0 0 760 330" role="img" aria-label="Line chart: as the test takes 4 GB, demand climbs from 4.9 GB to 9.6 GB and assigned memory follows in steps from 6.44 GB to 11.74 GB within about 40 seconds; when the test releases, demand falls to about 4.6 GB while assigned stays at 11.74 GB for two minutes; after an unsampled gap, assigned is back down to 8.15 GB at 13:44:59 with demand at 6.9 GB once swap counting is on."></svg></div>
+    <p class="codecap">Host samples every 5 seconds from <code>Get-VM</code>. Demand ran ahead of assigned memory for about 10 seconds, while the test was taking 256 MB a second, and Hyper-V briefly showed the status as Warning. About 370 MB went to swap during that peak. Nothing was sampled between 13:42:49 and 13:44:59. From about 13:44:55, demand includes swap in use (see the swap section below). A later check at 14:15:52 read 8.46 GB assigned and 6.94 GB demand.</p>
+  </div>
+  <div class="col">
+    <p>After the test let go, Hyper-V held the 11.7 GB for at least two minutes, then shrank the VM again. By 13:44:59 it was down to 8.15 GB, and half an hour later it was still steady at 8.46 GB. The VM grows when it needs memory and gives it back afterwards, with no restart and no manual step.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">A side effect</span>
+    <h2>The swap feedback loop</h2>
+    <p>Before the growth test, the guest already had 2.2 GB in swap. An hour later it was down to 5.5 GB of RAM with 2.6 GB in swap, spread across idle services: a Node build server, LocalStack, ClickHouse, DynamoDB Local and the VS Code server. The first version of the module caused this.</p>
+  </div>
+  <div class="wide loop">
+    <div><b>Hyper-V squeezes</b><span>The balloon inflates toward demand plus the 20% buffer, and the guest has to free memory to make room.</span></div>
+    <div><b>Linux swaps idle memory</b><span>Once the page cache is thin, the kernel moves idle process memory out to swap.</span></div>
+    <div><b>Reported use drops</b><span>Swapped pages no longer count in <code>MemTotal &minus; MemAvailable</code>, so demand falls and Hyper-V squeezes again.</span></div>
+  </div>
+  <div class="col">
+    <p>The fix is an option, <code>count_swap</code>, that adds swap in use to the reported figure. Memory pushed out to swap still counts as demand, so Hyper-V stops shrinking the VM once it starts swapping. Modules cannot read <code>total_swap_pages</code>, so the install script passes <code>SwapTotal</code> from <code>/proc/meminfo</code> when it loads the module, and the module reads free swap from the exported <code>nr_swap_pages</code>.</p>
+    <pre><code>	<span class="c-kw">if</span> (READ_ONCE(count_swap)) {
+		<span class="c-kw">long</span> swap_used = (<span class="c-kw">long</span>)(READ_ONCE(swap_total_kb) &gt;&gt; (PAGE_SHIFT - 10)) -
+				 atomic_long_read(&amp;nr_swap_pages);
+		<span class="c-kw">if</span> (swap_used &gt; 0)
+			<span class="c-ok">used += swap_used;</span>
+	}</code></pre>
+    <p>Turning it on raised the demand Hyper-V saw from about 4.7 GB to 6.9 GB within seconds, matching the swap in use. The VM now settles near 8.2 GB, and the swapped memory returns to RAM as the services touch it again.</p>
+  </div>
+  <div class="col compare">
+    <div><b>Default: real use only</b><span>Smallest footprint, around 6.8 GB on this VM. Idle service memory can drift out to swap over time.</span></div>
+    <div><b>With <code>--count-swap</code></b><span>Settles about 1.5 GB larger. Hyper-V stops squeezing once the guest starts swapping.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Startup</span>
+    <h2>Startup still gets the full 12 GB</h2>
+    <p>Our services need the full 12 GB while they start, so the module loads late. The VM boots with 4 GB of startup memory and a 12 GB maximum. Before the module loads, the stock driver reports the high <code>Committed_AS</code> figure, so Hyper-V hot-adds memory up to 12 GB within seconds. A systemd timer loads the module 10 minutes after boot, and the VM then shrinks to what it uses.</p>
+  </div>
+  <div class="col boot" aria-label="Boot timeline">
+    <div class="boot-track"><span class="runner"></span></div>
+    <div class="boot-steps">
+      <div><b>Boot</b><span>4 GB startup memory</span></div>
+      <div><b>First seconds</b><span>Hyper-V hot-adds memory up to 12 GB</span></div>
+      <div><b>+10 min</b><span>The timer loads <code>hv_demand</code></span></div>
+      <div><b>+15 min</b><span>The VM settles near 6.8 GB</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Before you start</span>
+    <h2>What the VM needs</h2>
+    <p>The script checks each of these and stops with a message if one is missing.</p>
+    <ul class="checks">
+      <li><b>Dynamic Memory on, startup below maximum.</b> With startup equal to the maximum, Hyper-V has no room to shrink the VM.</li>
+      <li><b>The <code>hv_balloon</code> driver loaded.</b> It ships with Ubuntu's <code>linux-azure</code> and generic kernels, and loads on its own in a Hyper-V VM.</li>
+      <li><b>Secure Boot off for the VM.</b> The module is unsigned, and kernel lockdown blocks unsigned modules.</li>
+      <li><b>A compiler and kernel headers.</b> The script installs <code>build-essential</code> and <code>linux-headers-$(uname -r)</code> with <code>apt-get</code> if they are missing, so it needs network access the first time.</li>
+      <li><b>A checkpoint first.</b> Take a Standard checkpoint in Hyper-V Manager before loading a kernel module on a VM you care about.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Using it</span>
+    <h2>One script per VM</h2>
+    <p><code>hyperv-memory-reclaim.sh</code> carries the module source. It checks the platform, installs the compiler and headers if they are missing, builds for the running kernel, loads the module and adds the boot timer. After a kernel update, the next boot rebuilds it automatically. Re-running it with new options applies them to the loaded module, and reloads the module if the build has changed.</p>
+  </div>
+  <div class="col cmds">
+    <div class="cmd"><code>sudo ./hyperv-memory-reclaim.sh</code><button type="button" class="copy">Copy</button><span class="what">Build, load now and load again 10 minutes after every boot</span></div>
+    <div class="cmd"><code>sudo hyperv-memory-reclaim install --count-swap</code><button type="button" class="copy">Copy</button><span class="what">Count swap in use as demand, so Hyper-V stops squeezing idle memory out to swap</span></div>
+    <div class="cmd"><code>sudo hyperv-memory-reclaim install --delay 15 --cushion 2048</code><button type="button" class="copy">Copy</button><span class="what">Change the boot delay or the headroom kept for page cache</span></div>
+    <div class="cmd"><code>sudo hyperv-memory-reclaim status</code><button type="button" class="copy">Copy</button><span class="what">Module state, boot timer and memory returned to Hyper-V</span></div>
+    <div class="cmd"><code>sudo hyperv-memory-reclaim unload</code><button type="button" class="copy">Copy</button><span class="what">Return to the stock driver now; the boot timer stays</span></div>
+    <div class="cmd"><code>sudo hyperv-memory-reclaim uninstall</code><button type="button" class="copy">Copy</button><span class="what">Remove the module, the timer and every installed file</span></div>
+  </div>
+  <div class="col">
+    <p>On the host, keep the VM's startup memory below its maximum. With startup equal to the maximum, Hyper-V has no room to shrink the VM.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Footprint</span>
+    <h2>What the script changes on the VM</h2>
+    <p>The script only adds files. It edits no existing file, and the <code>hv_balloon</code> driver on disk is never touched. The change to the kernel lives in memory: the probes disappear on <code>rmmod</code> or a reboot, and the boot timer adds them again 10 minutes later. Step through an install, or switch to uninstall to see what gets removed.</p>
+  </div>
+
+  <aside class="col eli5" aria-labelledby="eli5-h">
+    <h3 id="eli5-h"><span class="label">Explain like I'm 5</span></h3>
+    <p>The laptop's RAM is a toy box that a kid (the Linux VM) shares with a big sister (Windows). Every second, the kid tells Mum (Hyper-V) how many toys they need. The kid counts every toy they have <em>called dibs on</em>, not the ones they are playing with, so Mum never takes any back for the big sister.</p>
+    <dl class="eli5-list">
+      <div><dt>New notes in the kid's room</dt><dd>The script adds its own files, like sticky notes. It never scribbles in the kid's existing books.</dd></div>
+      <div><dt>One new habit</dt><dd>When the kid tells Mum how many toys they need, they now count the toys they are playing with, plus a few spare. Everything else the kid says stays the same.</dd></div>
+      <div><dt>An alarm clock</dt><dd>After every wake-up (boot), the kid keeps all the toys for the morning rush. Ten minutes later the alarm rings and the new habit starts again.</dd></div>
+      <div><dt>Taking it away</dt><dd><code>uninstall</code> peels off the notes and throws away the alarm, and the kid goes back to the old habit at once. The tools it borrowed to make the notes stay on the shelf.</dd></div>
+    </dl>
+  </aside>
+
+  <div class="wide fp" id="fp" data-mode="install">
+    <div class="fp-bar">
+      <div class="toggle" role="group" aria-label="Choose the command">
+        <button type="button" id="fpInstall" aria-pressed="true">install</button>
+        <button type="button" id="fpUninstall" aria-pressed="false">uninstall</button>
+      </div>
+      <button type="button" class="replay" id="fpPlay" hidden>Play</button>
+    </div>
+    <div class="fp-grid">
+      <ol class="fp-steps" id="fpStepsInstall">
+        <li><button type="button" data-step="1"><b>Check</b><span>Reads the platform; stops if anything is missing</span></button></li>
+        <li><button type="button" data-step="2"><b>Copy itself</b><span>So the timer still works if you move the file</span></button></li>
+        <li><button type="button" data-step="3"><b>Save settings</b><span>Your options, kept for later loads</span></button></li>
+        <li><button type="button" data-step="4"><b>Write source</b><span>Only rewritten if the contents changed</span></button></li>
+        <li><button type="button" data-step="5"><b>Build</b><span>For the running kernel, installing tools if needed</span></button></li>
+        <li><button type="button" data-step="6"><b>Load</b><span><code>insmod</code> with your settings</span></button></li>
+        <li><button type="button" data-step="7"><b>Hook</b><span>Two kretprobes; nothing else in the kernel changes</span></button></li>
+        <li><button type="button" data-step="8"><b>Boot timer</b><span>Loads the module again after every boot</span></button></li>
+      </ol>
+      <ol class="fp-steps" id="fpStepsUninstall" hidden>
+        <li><button type="button" data-step="1"><b>Unload</b><span><code>rmmod</code> removes the probes; the stock report is back at once</span></button></li>
+        <li><button type="button" data-step="2"><b>Remove timer</b><span>Disables it and deletes the unit files</span></button></li>
+        <li><button type="button" data-step="3"><b>Delete files</b><span>The script copy, the settings and everything in <code>/opt/hv-demand</code></span></button></li>
+      </ol>
+      <div class="fp-sys">
+        <div class="box">
+          <h3>Disk <span class="label">files</span></h3>
+          <ul class="fp-list">
+          <li class="fp-row" data-add="1" data-del="-" data-kind="read"><span class="fp-badge">reads</span><code>/sys/bus/vmbus/drivers/hv_balloon</code><span class="fp-what">Is this a Hyper-V VM with the balloon driver?</span></li>
+          <li class="fp-row" data-add="1" data-del="-" data-kind="read"><span class="fp-badge">reads</span><code>/proc/kallsyms</code><span class="fp-what">Do <code>post_status</code> and <code>vm_memory_committed</code> exist to hook?</span></li>
+          <li class="fp-row" data-add="1" data-del="-" data-kind="read"><span class="fp-badge">reads</span><code>/sys/kernel/security/lockdown</code><span class="fp-what">Is lockdown (Secure Boot) blocking unsigned modules?</span></li>
+          <li class="fp-row" data-add="2" data-del="3" data-kind="new"><span class="fp-badge">new</span><code>/usr/local/sbin/hyperv-memory-reclaim</code><span class="fp-what">A copy of the script, so the boot timer can run it</span></li>
+          <li class="fp-row" data-add="3" data-del="3" data-kind="new"><span class="fp-badge">new</span><code>/etc/hv-demand.conf</code><span class="fp-what">Cushion, boot delay and swap setting</span></li>
+          <li class="fp-row" data-add="4" data-del="3" data-kind="new"><span class="fp-badge">new</span><code>/opt/hv-demand/src/</code><span class="fp-what"><code>Makefile</code> and <code>hv_demand.c</code></span></li>
+          <li class="fp-row" data-add="5" data-del="keep" data-kind="pkg"><span class="fp-badge">apt</span><code>build-essential, linux-headers-$(uname -r)</code><span class="fp-what">Only if missing. Uninstall leaves them installed</span></li>
+          <li class="fp-row" data-add="5" data-del="3" data-kind="new"><span class="fp-badge">new</span><code>/opt/hv-demand/build/&lt;kernel&gt;/</code><span class="fp-what"><code>hv_demand.ko</code> and the build log, one folder per kernel</span></li>
+          <li class="fp-row" data-add="8" data-del="2" data-kind="new"><span class="fp-badge">new</span><code>/etc/systemd/system/hv-demand.{service,timer}</code><span class="fp-what">Runs <code>hyperv-memory-reclaim load</code> 10 minutes after boot</span></li>
+          <li class="fp-row" data-add="8" data-del="2" data-kind="new"><span class="fp-badge">link</span><code>/etc/systemd/system/timers.target.wants/hv-demand.timer</code><span class="fp-what">Created by <code>systemctl enable</code></span></li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>Running kernel <span class="label">memory only</span></h3>
+          <ul class="fp-list">
+          <li class="fp-row" data-add="6" data-del="1" data-kind="mem"><span class="fp-badge">memory</span><code>hv_demand module</code><span class="fp-what">Loaded with <code>insmod</code> from <code>/opt</code>, not installed into <code>/lib/modules</code></span></li>
+          <li class="fp-row" data-add="6" data-del="1" data-kind="mem"><span class="fp-badge">memory</span><code>/sys/module/hv_demand/parameters/</code><span class="fp-what"><code>enabled</code>, <code>cushion_mb</code>, <code>count_swap</code>, <code>swap_total_kb</code></span></li>
+          <li class="fp-row" data-add="7" data-del="1" data-kind="hook"><span class="fp-badge">hook</span><code>kretprobe on post_status()</code><span class="fp-what">Marks the task that is building the report</span></li>
+          <li class="fp-row" data-add="7" data-del="1" data-kind="hook"><span class="fp-badge">hook</span><code>kretprobe on vm_memory_committed()</code><span class="fp-what">Replaces the return value for that task only</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="flow-note" id="fpNote">Install, step by step.</p>
+  </div>
+
+  <div class="col">
+    <p>Things it leaves alone: GRUB and the kernel command line, <code>sysctl</code> settings, swap and <code>/etc/fstab</code>, the values in <code>/proc/meminfo</code>, and anything on the Windows host. There is no DKMS hook either. After a kernel update, the boot timer's <code>load</code> builds a fresh copy for the new kernel.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Under the hood</span>
+    <h2>How insmod loads the module, and how the probes fire</h2>
+    <p>A kernel module is compiled code that the running kernel links into itself, with the same access as the rest of the kernel. <code>insmod</code> is the smallest tool for loading one. Use the toggle to step through the load, then through a single status report once the probes are in place.</p>
+  </div>
+
+  <div class="wide pipe" id="pipe" data-mode="load">
+    <div class="fp-bar">
+      <div class="toggle" role="group" aria-label="Choose what to step through">
+        <button type="button" id="pipeLoad" aria-pressed="true">Loading with insmod</button>
+        <button type="button" id="pipeReport" aria-pressed="false">Each status report</button>
+      </div>
+      <button type="button" class="replay" id="pipePlay" hidden>Play</button>
+    </div>
+    <div class="pipe-mode" id="pipeModeLoad">
+      <ol class="pipe-chips">
+        <li><button type="button" data-step="1"><span class="pipe-where">user space</span><b>Open the file</b></button></li>
+        <li><button type="button" data-step="2"><span class="pipe-where">kernel</span><b>Gatekeeping</b></button></li>
+        <li><button type="button" data-step="3"><span class="pipe-where">kernel</span><b>Version check</b></button></li>
+        <li><button type="button" data-step="4"><span class="pipe-where">kernel</span><b>Link</b></button></li>
+        <li><button type="button" data-step="5"><span class="pipe-where">kernel</span><b>Parameters</b></button></li>
+        <li><button type="button" data-step="6"><span class="pipe-where">kernel</span><b>Run init</b></button></li>
+      </ol>
+      <div class="pipe-track" aria-hidden="true"><i></i></div>
+      <div class="pipe-details" aria-live="polite">
+        <div class="pipe-detail" data-step="1">
+          <span class="label">user space</span>
+          <h3>1. insmod opens the file</h3>
+          <p><code>insmod</code> takes a path to a <code>.ko</code> file, opens it and hands the open file and the option string to the kernel in one system call, <code>finit_module()</code>. That is all it does in user space.</p><p>Unlike <code>modprobe</code>, it does not look in <code>/lib/modules</code>, read <code>/etc/modprobe.d</code> or load dependencies. Nothing about <code>hv_demand</code> is registered with the system, so it never loads on its own: only the script and its boot timer load it.</p>
+          <pre><code>insmod /opt/hv-demand/build/$(uname -r)/hv_demand.ko \
+       cushion_mb=1024 count_swap=0 swap_total_kb=4194300
+<span class="c-com"># becomes, roughly:</span>
+finit_module(fd, <span class="c-ok">"cushion_mb=1024 count_swap=0 swap_total_kb=4194300"</span>, 0);</code></pre>
+        </div>
+        <div class="pipe-detail" data-step="2">
+          <span class="label">kernel</span>
+          <h3>2. The kernel decides whether to allow it</h3>
+          <p>The caller needs <code>CAP_SYS_MODULE</code>, which in practice means root, and <code>kernel.modules_disabled</code> must be 0. Then the kernel looks for a signature. With lockdown on, which Secure Boot usually switches on, an unsigned module is refused outright. That is why the script checks lockdown first and asks for Secure Boot to be off.</p><p>Without lockdown, the kernel accepts the module and marks itself <em>tainted</em>: <code>O</code> for out-of-tree and <code>E</code> for unsigned. The taint is a label for bug reports, and changes nothing about how the kernel runs.</p>
+        </div>
+        <div class="pipe-detail" data-step="3">
+          <span class="label">kernel</span>
+          <h3>3. The build must match the running kernel</h3>
+          <p>Every <code>.ko</code> carries a <code>vermagic</code> string recording the exact kernel it was built against, along with symbol version checksums. If they do not match the running kernel, the load fails with <code>Invalid module format</code>.</p><p>So a module built for <code>6.8.0-1063-azure</code> will not load on the next kernel update. The script keeps one build folder per kernel version and builds a new one the first time it sees a new kernel.</p>
+          <pre><code>$ modinfo -F vermagic hv_demand.ko
+6.8.0-1063-azure SMP preempt mod_unload modversions</code></pre>
+        </div>
+        <div class="pipe-detail" data-step="4">
+          <span class="label">kernel</span>
+          <h3>4. The kernel links the code into itself</h3>
+          <p>The kernel allocates memory for the module, copies in its code and data, and fills in every function and variable it calls from the rest of the kernel. A module can only use symbols the kernel <em>exports</em>.</p><p><code>register_kretprobe</code>, <code>si_mem_available</code> and <code>nr_swap_pages</code> are exported. <code>total_swap_pages</code> is not, which is why the script reads <code>SwapTotal</code> from <code>/proc/meminfo</code> and passes it in as a parameter.</p>
+        </div>
+        <div class="pipe-detail" data-step="5">
+          <span class="label">kernel</span>
+          <h3>5. Options become parameters in /sys</h3>
+          <p>The kernel parses the option string into the module's variables, then creates a file for each one under <code>/sys/module/hv_demand/parameters/</code>. They were declared with mode <code>0644</code>, so root can change them while the module runs.</p><p>That is how re-running the script with new options applies them instantly, without unloading anything.</p>
+          <pre><code>echo 2048 | sudo tee /sys/module/hv_demand/parameters/cushion_mb
+echo 0    | sudo tee /sys/module/hv_demand/parameters/enabled   <span class="c-com"># back to the stock figure</span></code></pre>
+        </div>
+        <div class="pipe-detail" data-step="6">
+          <span class="label">kernel</span>
+          <h3>6. init registers the two probes</h3>
+          <p>Finally the kernel calls the module's init function, <code>hv_demand_init()</code>. It registers a kretprobe on <code>vm_memory_committed()</code>, then one on <code>post_status()</code>, and writes a line to the kernel log. If either registration fails, init returns the error, the kernel throws the module away and <code>insmod</code> prints the error.</p><p>From the next status report on, Hyper-V sees the new figure.</p>
+          <pre><code>$ sudo dmesg | grep hv_demand
+hv_demand: reporting MemTotal-MemAvailable+1024MB to Hyper-V</code></pre>
+        </div>
+      </div>
+    </div>
+    <div class="pipe-mode" id="pipeModeReport" hidden>
+      <ol class="pipe-chips">
+        <li><button type="button" data-step="1"><span class="pipe-where">hv_balloon</span><b>post_status() starts</b></button></li>
+        <li><button type="button" data-step="2"><span class="pipe-where">mm</span><b>Committed_AS is computed</b></button></li>
+        <li><button type="button" data-step="3"><span class="pipe-where">hv_demand</span><b>Return value replaced</b></button></li>
+        <li><button type="button" data-step="4"><span class="pipe-where">hv_balloon</span><b>Report sent</b></button></li>
+        <li><button type="button" data-step="5"><span class="pipe-where">hv_demand</span><b>Marker cleared</b></button></li>
+      </ol>
+      <div class="pipe-track" aria-hidden="true"><i></i></div>
+      <div class="pipe-details" aria-live="polite">
+        <div class="pipe-detail" data-step="1">
+          <span class="label">hv_balloon</span>
+          <h3>1. post_status() starts, and the entry probe notes who called it</h3>
+          <p>Once a second, <code>hv_balloon</code> calls <code>post_status()</code> to build its report. A kprobe sits on the function's first instruction: the kernel swapped it for a breakpoint, or uses the ftrace hook at the start of the function where there is one. When it fires, <code>ps_entry()</code> runs and records the current task in <code>ps_task</code>.</p><p>Because this is a <em>return</em> probe, the kernel also swaps the function's return address for one that leads to a small piece of kernel code called a trampoline.</p>
+        </div>
+        <div class="pipe-detail" data-step="2">
+          <span class="label">mm</span>
+          <h3>2. vm_memory_committed() runs untouched</h3>
+          <p>Inside <code>get_pages_committed()</code>, the driver calls <code>vm_memory_committed()</code>, which returns <code>Committed_AS</code>: 20.1 GB on this VM. The function itself is never changed. Its return address has been swapped too, by the second kretprobe.</p>
+        </div>
+        <div class="pipe-detail" data-step="3">
+          <span class="label">hv_demand</span>
+          <h3>3. The return trampoline replaces the value</h3>
+          <p>Instead of going straight back to its caller, the function returns into the trampoline, which calls <code>vmc_return()</code> with a copy of the CPU registers. The return value is in one of them (<code>rax</code> on x86).</p><p>If the task matches <code>ps_task</code>, the handler overwrites that register with real use plus the cushion, using <code>regs_set_return_value()</code>. Then the trampoline jumps back to the real caller, which sees the new value.</p>
+        </div>
+        <div class="pipe-detail" data-step="4">
+          <span class="label">hv_balloon</span>
+          <h3>4. The report goes to the host as usual</h3>
+          <p><code>get_pages_committed()</code> adds the ballooned pages and the balloon floor as it always does, and <code>post_status()</code> sends <code>DM_STATUS_REPORT</code> to Hyper-V over VMBus. The driver has no idea anything changed.</p>
+        </div>
+        <div class="pipe-detail" data-step="5">
+          <span class="label">hv_demand</span>
+          <h3>5. The exit probe clears the marker</h3>
+          <p>When <code>post_status()</code> returns, its own trampoline runs <code>ps_return()</code>, which clears <code>ps_task</code>. Any other call to <code>vm_memory_committed()</code> now gets the real figure.</p><p>That includes <code>/proc/meminfo</code>, which calls the same function. When you run <code>cat /proc/meminfo</code>, the calling task is <code>cat</code>, not the balloon worker, so <code>Committed_AS</code> reads true.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p><b>Unloading.</b> <code>rmmod hv_demand</code> calls <code>delete_module()</code>. The kernel runs <code>hv_demand_exit()</code>, which unregisters both probes and waits for any handler still running. The original instructions and return paths are restored, and the module's memory is freed. The next report, at most a second later, carries <code>Committed_AS</code> again. The taint flag stays until the next reboot.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Trade-offs</span>
+    <h2>What to know before you run it</h2>
+  </div>
+  <div class="col caveats">
+    <div class="cav"><h3>Smaller page cache</h3><p>Hyper-V reclaims cache along with idle memory. Databases read more from disk until the cache warms up again. Raise <code>cushion_mb</code> to keep more of it.</p></div>
+    <div class="cav"><h3>Fast spikes</h3><p>A program that suddenly touches memory it reserved long ago has to wait for Hyper-V to add memory back. In testing that took about 5 seconds to start, and the 4 GB swap file absorbed the gap.</p></div>
+    <div class="cav"><h3>Tainted kernel</h3><p>The module is unsigned and built out of tree, so the kernel log marks it as tainted. It also needs Secure Boot off for the VM.</p></div>
+    <div class="cav"><h3>Upstream path</h3><p>Changing the default for every Linux guest on Hyper-V would cause regressions for other workloads. An opt-in <code>hv_balloon</code> parameter is a realistic patch for <code>linux-hyperv@vger.kernel.org</code>, with this data as evidence.</p></div>
+  </div>
+</section>
+
+<section id="disclaimer">
+  <div class="col disclaimer">
+    <span class="label">Disclaimer</span>
+    <h2>Use it at your own risk</h2>
+    <p>The investigation, the <code>hv_demand</code> module and the install script were written largely with Claude, an AI assistant. They were tested on one VM: Ubuntu 22.04 with kernel 6.8.0-1063-azure on Windows 11 Hyper-V. They are shared as field notes, not as a supported or reviewed product.</p>
+    <ul>
+      <li>The script runs as root and loads unsigned code into the running kernel. A bug at that level can crash or hang the VM and lose unsaved work.</li>
+      <li>Read the script before you run it. Try it on a VM you can afford to lose, and take a checkpoint first.</li>
+      <li>Do not run it on production systems, or on machines you do not own or administer.</li>
+      <li>Other kernels, distributions and Hyper-V versions may behave differently, or not work at all.</li>
+    </ul>
+    <p class="fine">The code and the information on this page are provided &ldquo;as is&rdquo;, without warranty of any kind, express or implied, including fitness for a particular purpose. By using them, you accept all risk. The author is not liable for any damage, data loss, downtime or other issue arising from their use. The kernel module is licensed under GPL-2.0, which also comes with no warranty. This post is not affiliated with or endorsed by Microsoft, Canonical or Anthropic.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Source</span>
+    <h2>The full script</h2>
+    <p>Everything above in one file: the platform checks, the embedded <code>hv_demand</code> module source, the per-kernel build, the load and reload logic, and the systemd boot timer. Download it or copy it into the VM, read it, then run it with <code>sudo</code>. The <a href="#disclaimer">disclaimer</a> above applies.</p>
+  </div>
+  <div class="wide script">
+    <div class="script-head"><span><b>hyperv-memory-reclaim.sh</b> &middot; bash &middot; <span id="scriptLines"></span> lines</span><span class="script-actions"><a class="copy" href="hyperv-memory-reclaim.sh" download>Download</a><button type="button" class="copy" id="copyScript">Copy script</button></span></div>
+    <pre><code id="fullScript">#!/bin/bash
+
+# Run inside a Hyper-V VM: let Hyper-V Dynamic Memory take back RAM the VM isn't using.
+#
+# The Linux Hyper-V balloon driver reports Committed_AS (reserved address space) as the VM's memory demand.
+# With our service stack that is ~20GB while ~4GB is actually used, so Hyper-V never shrinks the VM.
+# This builds and loads a small kernel module (hv_demand) that reports real use instead
+# (MemTotal - MemAvailable + a cushion). Only the figure sent to Hyper-V changes; /proc/meminfo and
+# overcommit are untouched. Hyper-V then reclaims spare memory after a few minutes and gives it back
+# (up to the VM's maximum) when the VM needs it.
+#
+# Needs Dynamic Memory on the VM with startup below maximum (if startup = maximum, Hyper-V never shrinks it).
+#
+# Usage: sudo ./hyperv-memory-reclaim.sh [command] [options]
+#   install        (default) build, load now, and load again on every boot after a delay
+#     --no-boot      load now only; don't add the boot timer
+#     --no-load      build and add the boot timer; don't load now
+#     --cushion MB   MB reported on top of real use (default 1024; higher keeps more page cache)
+#     --delay MIN    minutes after boot before loading (default 10, so startup gets the full maximum)
+#     --count-swap   also report swap in use, so Hyper-V stops shrinking the VM once it starts swapping
+#     --no-count-swap  report real use only (default; the VM settles smaller but may push idle memory to swap)
+#   status         show the module, the Hyper-V balloon and the boot timer
+#   load           load now with the saved settings, building for the running kernel if needed
+#   unload         unload now; Hyper-V goes back to the stock behaviour (boot timer unchanged)
+#   uninstall      unload, remove the boot timer and all installed files
+
+# DISCLAIMER: Most of this script and the kernel module were written with Claude, an AI assistant,
+# and were tested on one VM only (Ubuntu 22.04, kernel 6.8.0-1063-azure, Windows 11 Hyper-V).
+# It runs as root and loads unsigned code into the running kernel; a bug can crash or hang the VM.
+# Read it before running it, take a checkpoint first, and don't use it on production systems.
+# Provided "as is", without warranty of any kind. You use it entirely at your own risk; the author
+# accepts no liability for any damage, data loss, downtime or other issue arising from its use.
+
+set -e
+
+MODULE="hv_demand"
+INSTALL_DIR="/opt/hv-demand"
+SRC_DIR="${INSTALL_DIR}/src"
+BUILD_ROOT="${INSTALL_DIR}/build"
+CONF="/etc/hv-demand.conf"
+SELF="/usr/local/sbin/hyperv-memory-reclaim"
+UNIT="hv-demand"
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+usage() {
+    sed -n '3,25p' "$0" | sed 's/^# \{0,1\}//'
+    exit 1
+}
+
+info() { echo -e "${GREEN}$*${NC}"; }
+warn() { echo -e "${YELLOW}$*${NC}"; }
+die()  { echo -e "${RED}$*${NC}" &gt;&amp;2; exit 1; }
+
+# ---------------------------------------------------------------------------------------------------------
+# Settings
+
+CUSHION_MB=1024
+BOOT_DELAY_MIN=10
+COUNT_SWAP=0
+[ -f "$CONF" ] &amp;&amp; source "$CONF"
+
+save_conf() {
+    cat &gt; "$CONF" &lt;&lt;EOF
+# Written by hyperv-memory-reclaim. Re-run 'hyperv-memory-reclaim install [options]' to change.
+CUSHION_MB=${CUSHION_MB}
+BOOT_DELAY_MIN=${BOOT_DELAY_MIN}
+COUNT_SWAP=${COUNT_SWAP}
+EOF
+}
+
+swap_total_kb() {
+    awk '/^SwapTotal:/ {print $2}' /proc/meminfo
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Checks
+
+require_root() {
+    [ "$(id -u)" -eq 0 ] || die "Run as root (sudo $0 $*)"
+}
+
+check_platform() {
+    [ -d /sys/bus/vmbus/drivers/hv_balloon ] \
+        || die "No Hyper-V balloon driver (hv_balloon). This only works in a Hyper-V VM with Dynamic Memory."
+    grep -qw post_status /proc/kallsyms &amp;&amp; grep -qw vm_memory_committed /proc/kallsyms \
+        || die "This kernel's hv_balloon has no post_status()/vm_memory_committed(); the module can't hook it."
+    grep -q '\[none\]' /sys/kernel/security/lockdown 2&gt;/dev/null || [ ! -f /sys/kernel/security/lockdown ] \
+        || die "Kernel lockdown is on (usually Secure Boot), which blocks unsigned modules. Turn off Secure Boot for this VM."
+    [ "$(cat /proc/sys/kernel/modules_disabled 2&gt;/dev/null)" != "1" ] \
+        || die "Module loading is disabled (kernel.modules_disabled=1)."
+}
+
+is_loaded() {
+    grep -q "^${MODULE} " /proc/modules
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Build
+
+# Only replaces a file whose contents changed, so an unchanged source doesn't trigger a rebuild
+put_file() {
+    if ! cmp -s "$1.new" "$1"; then mv -f "$1.new" "$1"; else rm -f "$1.new"; fi
+}
+
+write_source() {
+    mkdir -p "$SRC_DIR"
+    cat &gt; "${SRC_DIR}/Makefile.new" &lt;&lt;'EOF'
+obj-m := hv_demand.o
+EOF
+    put_file "${SRC_DIR}/Makefile"
+    cat &gt; "${SRC_DIR}/hv_demand.c.new" &lt;&lt;'EOF'
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * hv_demand - make the Hyper-V balloon driver report real memory use as demand.
+ *
+ * hv_balloon's post_status() tells the host how much memory the guest needs using
+ * vm_memory_committed() (Committed_AS). On Linux that is reserved address space, which
+ * for ClickHouse/Go/JVM/Node workloads is far above what is actually used, so Hyper-V
+ * Dynamic Memory never takes memory back.
+ *
+ * This module swaps the Committed_AS term, only when called from post_status(), for
+ * (MemTotal - MemAvailable + cushion_mb). The driver still adds ballooned pages,
+ * not-yet-onlined hot-added pages and its balloon floor on top, as before.
+ * Nothing else that reads Committed_AS (/proc/meminfo, overcommit) is affected.
+ *
+ * Runtime knobs (/sys/module/hv_demand/parameters/):
+ *   enabled        1 = report real use, 0 = pass through the original value
+ *   cushion_mb     extra MB added to the reported use (headroom for page cache)
+ *   count_swap     1 = also report swap in use, so memory pushed out to swap still counts
+ *                  as demand and Hyper-V stops squeezing once the guest starts swapping
+ *   swap_total_kb  SwapTotal from /proc/meminfo (total_swap_pages isn't exported to modules)
+ * rmmod restores the stock behaviour.
+ */
+#include &lt;linux/module.h&gt;
+#include &lt;linux/kprobes.h&gt;
+#include &lt;linux/mm.h&gt;
+#include &lt;linux/sched.h&gt;
+#include &lt;linux/swap.h&gt;
+#include &lt;linux/atomic.h&gt;
+
+static int enabled = 1;
+module_param(enabled, int, 0644);
+MODULE_PARM_DESC(enabled, "1 = report real memory use to Hyper-V, 0 = original Committed_AS");
+
+static unsigned int cushion_mb = 1024;
+module_param(cushion_mb, uint, 0644);
+MODULE_PARM_DESC(cushion_mb, "MB added to the reported use (default 1024)");
+
+static int count_swap;
+module_param(count_swap, int, 0644);
+MODULE_PARM_DESC(count_swap, "1 = also report swap in use as demand (needs swap_total_kb)");
+
+static unsigned long swap_total_kb;
+module_param(swap_total_kb, ulong, 0644);
+MODULE_PARM_DESC(swap_total_kb, "SwapTotal in kB from /proc/meminfo, set by the install script");
+
+/* Task currently inside post_status(), or NULL. */
+static struct task_struct *ps_task;
+
+static int ps_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	cmpxchg(&amp;ps_task, NULL, current);
+	return 0;
+}
+
+static int ps_return(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	cmpxchg(&amp;ps_task, current, NULL);
+	return 0;
+}
+
+static int vmc_return(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	long total, avail, used;
+
+	if (!READ_ONCE(enabled) || READ_ONCE(ps_task) != current)
+		return 0;
+
+	total = (long)totalram_pages();
+	avail = si_mem_available();
+	used = total - avail;
+	if (used &lt; 0)
+		used = 0;
+	used += (long)READ_ONCE(cushion_mb) &lt;&lt; (20 - PAGE_SHIFT);
+
+	if (READ_ONCE(count_swap)) {
+		long swap_used = (long)(READ_ONCE(swap_total_kb) &gt;&gt; (PAGE_SHIFT - 10)) -
+				 atomic_long_read(&amp;nr_swap_pages);
+		if (swap_used &gt; 0)
+			used += swap_used;
+	}
+
+	regs_set_return_value(regs, (unsigned long)used);
+	return 0;
+}
+
+static struct kretprobe ps_probe = {
+	.kp.symbol_name = "post_status",
+	.entry_handler  = ps_entry,
+	.handler        = ps_return,
+	.maxactive      = 8,
+};
+
+static struct kretprobe vmc_probe = {
+	.kp.symbol_name = "vm_memory_committed",
+	.handler        = vmc_return,
+	.maxactive      = 64,
+};
+
+static int __init hv_demand_init(void)
+{
+	int ret;
+
+	ret = register_kretprobe(&amp;vmc_probe);
+	if (ret) {
+		pr_err("hv_demand: probe on vm_memory_committed failed: %d\n", ret);
+		return ret;
+	}
+	ret = register_kretprobe(&amp;ps_probe);
+	if (ret) {
+		pr_err("hv_demand: probe on post_status failed: %d\n", ret);
+		unregister_kretprobe(&amp;vmc_probe);
+		return ret;
+	}
+	pr_info("hv_demand: reporting MemTotal-MemAvailable+%uMB%s to Hyper-V\n", cushion_mb,
+		count_swap ? "+swap used" : "");
+	return 0;
+}
+
+static void __exit hv_demand_exit(void)
+{
+	unregister_kretprobe(&amp;ps_probe);
+	unregister_kretprobe(&amp;vmc_probe);
+	pr_info("hv_demand: unloaded, missed ps=%d vmc=%d\n", ps_probe.nmissed, vmc_probe.nmissed);
+}
+
+module_init(hv_demand_init);
+module_exit(hv_demand_exit);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Report real memory use (not Committed_AS) to Hyper-V Dynamic Memory");
+EOF
+    put_file "${SRC_DIR}/hv_demand.c"
+}
+
+ensure_toolchain() {
+    local kver="$1" pkgs=()
+    command -v make &gt;/dev/null &amp;&amp; command -v gcc &gt;/dev/null || pkgs+=(build-essential)
+    [ -d "/lib/modules/${kver}/build" ] || pkgs+=("linux-headers-${kver}")
+    [ ${#pkgs[@]} -eq 0 ] &amp;&amp; return 0
+    command -v apt-get &gt;/dev/null || die "Missing ${pkgs[*]} and no apt-get to install them."
+    info "Installing ${pkgs[*]}..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -q "${pkgs[@]}" \
+        || die "Couldn't install ${pkgs[*]}. Install them, then run: $SELF load"
+}
+
+# Builds once per kernel version, so a kernel update gets a fresh build on the next load.
+build_module() {
+    local kver out
+    kver="$(uname -r)"
+    out="${BUILD_ROOT}/${kver}"
+    if [ -f "${out}/${MODULE}.ko" ] &amp;&amp; [ "${out}/${MODULE}.ko" -nt "${SRC_DIR}/hv_demand.c" ]; then
+        return 0
+    fi
+    ensure_toolchain "$kver"
+    info "Building ${MODULE} for ${kver}..."
+    rm -rf "$out"
+    mkdir -p "$out"
+    cp "${SRC_DIR}/Makefile" "${SRC_DIR}/hv_demand.c" "$out/"
+    make -s -C "/lib/modules/${kver}/build" M="$out" modules &gt;"${out}/build.log" 2&gt;&amp;1 \
+        || { cat "${out}/build.log" &gt;&amp;2; die "Build failed (log: ${out}/build.log)"; }
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Load / unload
+
+describe() {
+    local swap="real use only"
+    [ "$COUNT_SWAP" = "1" ] &amp;&amp; swap="swap in use counted"
+    echo "cushion ${CUSHION_MB} MB, ${swap}"
+}
+
+load_module() {
+    local ko
+    build_module
+    ko="${BUILD_ROOT}/$(uname -r)/${MODULE}.ko"
+    if is_loaded; then
+        if [ "$(modinfo -F srcversion "$ko")" = "$(cat "/sys/module/${MODULE}/srcversion" 2&gt;/dev/null)" ]; then
+            echo "$CUSHION_MB" &gt; "/sys/module/${MODULE}/parameters/cushion_mb"
+            swap_total_kb &gt; "/sys/module/${MODULE}/parameters/swap_total_kb"
+            echo "$COUNT_SWAP" &gt; "/sys/module/${MODULE}/parameters/count_swap"
+            echo 1 &gt; "/sys/module/${MODULE}/parameters/enabled"
+            info "${MODULE} already loaded; settings applied ($(describe))."
+            return 0
+        fi
+        info "Loaded ${MODULE} is an older build; reloading it."
+        rmmod "$MODULE"
+    fi
+    insmod "$ko" cushion_mb="$CUSHION_MB" count_swap="$COUNT_SWAP" swap_total_kb="$(swap_total_kb)"
+    info "${MODULE} loaded ($(describe)). Hyper-V usually starts reclaiming within ~5 minutes."
+}
+
+unload_module() {
+    if is_loaded; then
+        rmmod "$MODULE"
+        info "${MODULE} unloaded; Hyper-V sees Committed_AS again."
+    else
+        echo "${MODULE} isn't loaded."
+    fi
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Boot timer
+
+install_boot() {
+    cat &gt; "/etc/systemd/system/${UNIT}.service" &lt;&lt;EOF
+[Unit]
+Description=Report real memory use to Hyper-V Dynamic Memory (${MODULE})
+
+[Service]
+Type=oneshot
+ExecStart=${SELF} load
+EOF
+    cat &gt; "/etc/systemd/system/${UNIT}.timer" &lt;&lt;EOF
+[Unit]
+Description=Load ${MODULE} ${BOOT_DELAY_MIN} min after boot, once startup has had the full memory maximum
+
+[Timer]
+OnBootSec=${BOOT_DELAY_MIN}min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+EOF
+    systemctl daemon-reload
+    # enable without --now: starting a timer whose OnBootSec has passed would fire it immediately
+    systemctl enable "${UNIT}.timer" &gt;/dev/null 2&gt;&amp;1
+    info "Boot timer enabled: loads ${MODULE} ${BOOT_DELAY_MIN} min after each boot."
+}
+
+remove_boot() {
+    systemctl disable --now "${UNIT}.timer" &gt;/dev/null 2&gt;&amp;1 || true
+    rm -f "/etc/systemd/system/${UNIT}.service" "/etc/systemd/system/${UNIT}.timer"
+    systemctl daemon-reload
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# Commands
+
+cmd_install() {
+    local boot=1 load=1
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --no-boot) boot=0 ;;
+            --no-load) load=0 ;;
+            --cushion) shift; [[ "$1" =~ ^[0-9]+$ ]] || die "--cushion needs a number of MB"; CUSHION_MB="$1" ;;
+            --delay)   shift; [[ "$1" =~ ^[0-9]+$ ]] || die "--delay needs a number of minutes"; BOOT_DELAY_MIN="$1" ;;
+            --count-swap)    COUNT_SWAP=1 ;;
+            --no-count-swap) COUNT_SWAP=0 ;;
+            *) usage ;;
+        esac
+        shift
+    done
+
+    check_platform
+    # keep an installed copy so the boot timer works even if this file moves
+    if [ "$(readlink -f "$0")" != "$SELF" ]; then
+        install -m 755 "$0" "$SELF"
+    fi
+    save_conf
+    write_source
+    build_module
+    [ "$load" -eq 1 ] &amp;&amp; load_module
+    if [ "$boot" -eq 1 ]; then
+        install_boot
+    else
+        remove_boot
+        warn "No boot timer: ${MODULE} won't be loaded after a restart."
+    fi
+    echo "Check progress with: $SELF status"
+}
+
+cmd_status() {
+    local kver
+    kver="$(uname -r)"
+    echo "Kernel:        ${kver}"
+    if is_loaded; then
+        local p="/sys/module/${MODULE}/parameters"
+        echo -e "Module:        ${GREEN}loaded${NC} (enabled=$(cat $p/enabled)," \
+            "cushion=$(cat $p/cushion_mb) MB, count_swap=$(cat $p/count_swap 2&gt;/dev/null || echo n/a))"
+    else
+        echo -e "Module:        ${YELLOW}not loaded${NC}"
+    fi
+    if [ -f "${BUILD_ROOT}/${kver}/${MODULE}.ko" ]; then
+        echo "Built:         yes, for this kernel"
+    else
+        echo "Built:         no, for this kernel (built on next load)"
+    fi
+    if systemctl is-enabled "${UNIT}.timer" &gt;/dev/null 2&gt;&amp;1; then
+        echo "Boot timer:    enabled, ${BOOT_DELAY_MIN} min after boot" \
+            "(last run: $(systemctl show -p LastTriggerUSec --value "${UNIT}.timer"), result: $(systemctl show -p Result --value "${UNIT}.service"))"
+    else
+        echo "Boot timer:    not enabled"
+    fi
+    if [ -r /sys/kernel/debug/hv-balloon ]; then
+        local ballooned
+        ballooned=$(awk -F: '/pages_ballooned/ {gsub(/ /,"",$2); print $2}' /sys/kernel/debug/hv-balloon)
+        echo "Given back:    $(( ballooned * 4 / 1024 )) MB returned to Hyper-V (balloon)"
+    fi
+    echo
+    free -m | head -2
+}
+
+cmd_uninstall() {
+    unload_module
+    remove_boot
+    rm -rf "$INSTALL_DIR" "$CONF" "$SELF"
+    info "Removed. Hyper-V sees Committed_AS again."
+}
+
+COMMAND="${1:-install}"
+[ $# -gt 0 ] &amp;&amp; shift
+
+case "$COMMAND" in
+    install)    require_root; cmd_install "$@" ;;
+    status)     require_root; cmd_status ;;
+    load)       require_root; check_platform; [ -f "${SRC_DIR}/hv_demand.c" ] || write_source; load_module ;;
+    unload)     require_root; unload_module ;;
+    uninstall)  require_root; cmd_uninstall ;;
+    --no-boot|--no-load|--cushion|--delay|--count-swap|--no-count-swap) require_root; cmd_install "$COMMAND" "$@" ;;
+    -h|--help|help) usage ;;
+    *) usage ;;
+esac</code></pre>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Further reading</span>
+    <h2>References</h2>
+    <ul class="refs">
+      <li><a href="https://github.com/torvalds/linux/blob/master/drivers/hv/hv_balloon.c"><code>drivers/hv/hv_balloon.c</code></a>, the Linux Hyper-V balloon driver, including <code>post_status()</code> and <code>get_pages_committed()</code>.</li>
+      <li><a href="https://docs.kernel.org/trace/kprobes.html">Kernel Probes (Kprobes)</a>, the kernel documentation for kprobes and kretprobes.</li>
+      <li><a href="https://docs.kernel.org/filesystems/proc.html">The <code>/proc</code> filesystem</a>, which defines <code>Committed_AS</code> and <code>MemAvailable</code> in <code>/proc/meminfo</code>.</li>
+    </ul>
+  </div>
+</section>
+
+</article>
+</main>
+
+<footer class="wide">
+  <span><a href="/blog/">&larr; All posts</a> &middot; <a href="/">Home</a></span>
+  <span>Questions or corrections? <a href="https://www.linkedin.com/in/danielphingston">Message me on LinkedIn</a>.</span>
+</footer>
+
+</body>
+</html>
