@@ -355,3 +355,8 @@ footer a:hover { color: var(--assigned); }
 .disclaimer ul { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
 .disclaimer .fine { font-size: 14.5px; line-height: 1.6; color: var(--muted); }
 @media (max-width: 760px) { .disclaimer { padding: 18px; } }
+
+/* Comments (giscus) */
+.comments { display: grid; gap: 14px; margin-top: 76px; width: 100%; }
+.comments .giscus { min-height: 120px; }
+@media print { .comments { display: none; } }

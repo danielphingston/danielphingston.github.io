@@ -54,7 +54,9 @@ blog/index.html                      List of posts (styled with base.css + simpl
 blog/<slug>/index.html               One post, with its own post.css / post.js beside it
 ```
 
-To add a post, create `blog/<slug>/index.html`, then list it in three places: a card in `blog/index.html`, an item in the home page's `#writing` section (story mode's scribe reads it from there) a URL in `sitemap.xml` (update its `<lastmod>`), and an `<entry>` in `blog/feed.xml`.
+To add a post, create `blog/<slug>/index.html`, then list it in three places: a card in `blog/index.html`, an item in the home page's `#writing` section (story mode's scribe reads it from there), a URL in `sitemap.xml` (update its `<lastmod>`), and an `<entry>` in `blog/feed.xml`.
+
+Comments and reactions use [giscus](https://giscus.app) (GitHub Discussions, category "Announcements", mapped by page path). To add them to a new post, copy the `<section class="comments">` block from the end of `blog/hyper-v-memory-reclaim/index.html` and the `.comments` rules from its `post.css`. The first comment or reaction on a page creates its discussion.
 
 ## Common changes
 
