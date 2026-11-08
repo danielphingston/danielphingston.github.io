@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fixing a Cosmic Byte Stellaris with foam tape, copper wire and a toothpick · Daniel Phingston</title>
+<meta name="description" content="LB, RB, A and B stopped working on a Cosmic Byte Stellaris controller. The bumper foam had crumbled and the carbon pads under A and B had worn off. A repair with foam tape and copper wire, plus a full disassembly guide and an exploded view.">
+<link rel="canonical" href="https://danielphingston.github.io/blog/stellaris-controller-repair/">
+<meta name="author" content="Daniel Phingston">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Fixing a Cosmic Byte Stellaris with foam tape, copper wire and a toothpick">
+<meta property="og:description" content="Four dead buttons, no spare parts and no repair guide. What had failed inside a Cosmic Byte Stellaris, how I fixed it, and how to take one apart.">
+<meta property="og:url" content="https://danielphingston.github.io/blog/stellaris-controller-repair/">
+<meta property="og:image" content="https://danielphingston.github.io/blog/stellaris-controller-repair/img/repaired.jpg">
+<meta property="article:published_time" content="2026-11-08">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" type="application/atom+xml" title="Daniel Phingston · Blog" href="https://danielphingston.github.io/blog/feed.xml">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600;700&family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="post.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Fixing a Cosmic Byte Stellaris with foam tape, copper wire and a toothpick",
+  "description": "LB, RB, A and B stopped working on a Cosmic Byte Stellaris controller. The bumper foam had crumbled and the carbon pads under A and B had worn off. A repair with foam tape and copper wire, plus a full disassembly guide and an exploded view.",
+  "datePublished": "2026-11-08",
+  "author": { "@type": "Person", "name": "Daniel Phingston", "url": "https://danielphingston.github.io/" },
+  "mainEntityOfPage": "https://danielphingston.github.io/blog/stellaris-controller-repair/",
+  "image": "https://danielphingston.github.io/blog/stellaris-controller-repair/img/repaired.jpg",
+  "keywords": ["Cosmic Byte Stellaris", "controller repair", "gamepad", "teardown", "conductive pad", "tact switch"]
+}
+</script>
+<script src="post.js" defer></script>
+</head>
+<body>
+
+<header class="wide masthead">
+  <a class="mark" href="/">Daniel Phingston</a>
+  <nav aria-label="Site">
+    <a href="/blog/">Blog</a>
+    <a href="/?view=simple">Resume</a>
+    <a href="https://github.com/danielphingston">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<div class="wide hero">
+  <span class="label">Repair log &middot; Hardware &middot; Teardown</span>
+  <h1>Fixing a Cosmic Byte Stellaris with <em>foam tape, copper wire and a toothpick</em></h1>
+  <p class="sub">Four dead buttons. No spare parts. No repair guide.</p>
+  <p class="dek">A friend's Stellaris controller had lost LB, RB, A and B. I had no idea why, so I opened it up to find out. The cause turned out to be crumbled foam under the bumpers and worn-off carbon pads under A and B. None of that is electronic, so I could fix it with things I already had at home. It's my first hardware repair that actually worked, more or less. This post covers what I found, how I fixed it, and a full teardown guide with an interactive exploded view.</p>
+  <div class="byline">
+    <span><b><a href="/">Daniel Phingston</a></b></span>
+    <span><time datetime="2026-11-08">8 November 2026</time></span>
+    <span>Cosmic Byte Stellaris &middot; wired, 2.4 GHz and Bluetooth</span>
+  </div>
+  <p class="notice"><b>Heads up:</b> opening the controller will likely void its warranty. If yours is still covered, claim that first. The exploded view and diagrams are drawn from my teardown photos and are close, not exact.</p>
+
+  <section class="plate" aria-label="Exploded view of the controller">
+    <div class="stage">
+      <span class="label plate-tag">Fig. 1 &middot; Exploded view &middot; drag to rotate</span>
+      <svg id="scene" viewBox="-280 -170 560 340" role="img" aria-label="Interactive exploded 3D view of the Stellaris controller">
+        <g id="world"></g>
+        <g id="labels" class="lab"></g>
+      </svg>
+    </div>
+    <div class="controls">
+      <div>
+        <span class="label ctl-h">Open / close</span>
+        <div class="btnrow"><button id="playOpen" class="primary">Open it</button><button id="playClose">Close it</button></div>
+        <input id="explode" type="range" min="0" max="6" step="0.01" value="6" aria-label="How far apart the parts are">
+      </div>
+      <div>
+        <span class="label ctl-h">Teardown order</span>
+        <ol class="stagelist" id="stagelist"></ol>
+      </div>
+      <div>
+        <span class="label ctl-h">View</span>
+        <div class="btnrow" id="views">
+          <button data-view="back" aria-pressed="true">Back</button><button data-view="front" aria-pressed="false">Front</button><button data-view="side" aria-pressed="false">Side</button><button data-view="top" aria-pressed="false">Top</button>
+        </div>
+      </div>
+      <div>
+        <span class="label ctl-h">Contact pads</span>
+        <div class="btnrow" id="padmode"><button data-pad="worn" aria-pressed="true">As found</button><button data-pad="fixed" aria-pressed="false">Repaired</button></div>
+      </div>
+      <p class="hint">Click a part, or a name in the list below, to isolate it. Parts in red are where the faults were.</p>
+    </div>
+  </section>
+  <nav class="index" id="partindex" aria-label="Parts index"></nav>
+</div>
+
+<article>
+
+<section>
+  <div class="col">
+    <span class="label">The symptom</span>
+    <h2>Four buttons that moved but did nothing</h2>
+    <p>A friend handed me his Cosmic Byte Stellaris with four buttons out. LB and RB had lost their click and sent nothing. A and B still pressed normally, but never registered.</p>
+    <p>I looked for a repair guide first. There wasn't one: no fixes for this controller, and barely any photos of the inside. So I opened it myself, photographed every step, and built the exploded view above from those photos.</p>
+  </div>
+  <div class="col">
+    <div class="tip">
+      <p><b>Where I'm starting from.</b> I'm not an electronics person. I've only recently started poking at hardware circuits, for fun and to learn. Before this, the closest I'd come was opening a PS5 controller and closing it again while following a video. I went into this one with almost no idea what I'd find.</p>
+      <p style="margin-top:10px">So read this as a beginner's notes, not an expert's guide. If you know a better way to do any of it, the comments are open.</p>
+    </div>
+  </div>
+  <div class="col tablewrap">
+    <table>
+      <thead><tr><th>Buttons</th><th>What it did</th><th>What I found inside</th></tr></thead>
+      <tbody>
+        <tr><td>LB, RB</td><td>No click, no input</td><td>The foam pads on both bumpers had crumbled. One bumper switch was also worn flat.</td></tr>
+        <tr><td>A, B</td><td>Pressed normally, no input</td><td>The conductive pads under the A and B domes had worn off.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p class="tip"><b>Check before you open yours.</b> Test every button in a browser gamepad tester such as <a href="https://hardwaretester.com/gamepad">hardwaretester.com/gamepad</a>, in wired, 2.4 GHz and Bluetooth mode. If the same buttons fail in all three modes, the fault is in the hardware, not the pairing or the drivers.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Getting in</span>
+    <h2>Six screws and no hidden clips</h2>
+    <p>The Stellaris is easy to open. Six screws hold the back shell and two more hold the triggers. Each of the two boards has three screws, and each one is marked with a small screw icon printed on the board. There are no hidden clips to fight. The <a href="#disassembly">step-by-step guide</a> is at the end of this post.</p>
+    <p>One useful detail: the power button sits on the top edge of the main board, next to the USB-C port. With the battery board still connected, you can switch the controller on while it's open and test each button as you go.</p>
+    <button class="show3d" data-go="6" data-view="back">Show in 3D</button>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Root cause</span>
+    <h2>Crumbled foam, a worn switch and missing pads</h2>
+    <h3>The bumpers</h3>
+    <p>Each bumper has a small foam pad on its arm. When you press the bumper, the pad pushes a tact switch on the board. On this controller both pads had turned to crumbs, so every press stopped just short of the switch.</p>
+    <p>One side was worse. The switch has a small raised nub that the bumper presses on, and on that switch the nub had worn completely flat. Even a full press barely touched it.</p>
+    <button class="show3d" data-go="3" data-sel="bumpers" data-pad="worn">Show in 3D</button>
+  </div>
+  <div class="col photos">
+    <figure><img src="img/bumper-pad.jpg" alt="Bumper held between fingers, with crumbled foam on its arm" loading="lazy"><figcaption>The bumper arm, with what was left of its foam pad.</figcaption></figure>
+    <figure><img src="img/front-shell.jpg" alt="Front shell interior with button holes and stick wells" loading="lazy"><figcaption>The front shell with the board out.</figcaption></figure>
+  </div>
+  <div class="col">
+    <h3>A and B</h3>
+    <p>The face buttons sit on a clear silicone membrane. Under each dome are two black pads made of conductive carbon. When you press a button, the pads bridge two sets of gold contacts on the board, and the controller sees the press. On the A and B domes the pads had worn away, leaving only a dark residue. The buttons still moved, but nothing connected.</p>
+    <button class="show3d" data-go="6" data-sel="membrane" data-pad="worn">Show in 3D</button>
+  </div>
+  <div class="col photos">
+    <figure><img src="img/main-board.jpg" alt="Main board sitting in the front shell" loading="lazy"><figcaption>The main board in the front shell. The ABXY membrane sits underneath it.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">The fix</span>
+    <h2>Parts from around the house</h2>
+    <p>I had no replacement parts. The good news was that none of these faults were electronic. The bumpers needed something to fill a gap, and the domes needed something that conducts. Both were already in the house.</p>
+    <h3>Bumpers: foam tape and a wire bump</h3>
+    <p>I had some double-sided foam tape left over, which is close to what the original pads were made of. I cut small pieces to replace the missing foam. For the switch that had worn flat, I glued a tiny coil of bare copper wire on top, so the bumper has something to press again.</p>
+  </div>
+  <figure class="col fig">
+    <svg viewBox="0 0 520 170" role="img" aria-label="Bumper cross-section, as found and repaired">
+      <g font-family="JetBrains Mono, monospace" font-size="10" fill="var(--muted)">
+        <text x="20" y="20">AS FOUND</text><text x="280" y="20">REPAIRED</text>
+      </g>
+      <g id="bumpA"></g><g id="bumpB" transform="translate(260 0)"></g>
+    </svg>
+    <figcaption>Fig. 2 &middot; The bumper's foam pad closes the gap to the switch, and the switch's nub takes the press. Both had worn away. Foam tape and a small wire coil replace them.</figcaption>
+  </figure>
+  <div class="col">
+    <ol class="steps">
+      <li><span>Scrape the crumbled foam off the bumper arm with a toothpick.</span></li>
+      <li><span>Cut a piece of foam tape to the size of the old pad and stick it in the same place.</span></li>
+      <li><span>If a switch has worn flat, wind a tiny coil of bare wire and glue it to the top of the switch to rebuild the nub.</span></li>
+      <li><span>Test before you close the controller. If the button reads as always pressed, trim the foam. If it doesn't click, add another layer.</span></li>
+    </ol>
+  </div>
+  <div class="col photos two">
+    <figure><img src="img/switch-worn.jpg" alt="Bumper switch before the repair, flat blue top" loading="lazy"><figcaption><span class="pair-tag">Before</span><br>The nub is worn flat.</figcaption></figure>
+    <figure><img src="img/switch-fixed.jpg" alt="Same bumper switch with a small copper wire coil glued on top" loading="lazy"><figcaption><span class="pair-tag ok">After</span><br>A small copper coil glued on as a new nub.</figcaption></figure>
+  </div>
+
+  <div class="col">
+    <h3>A and B: copper wire spirals</h3>
+    <p>The pads only have to conduct. I had some bare copper wire, so I wound it into small flat spirals around a toothpick. I used the same toothpick to dab superglue onto each dome and set two spirals per button, where the old pads had been.</p>
+  </div>
+  <figure class="col fig">
+    <svg viewBox="0 0 520 190" role="img" aria-label="Membrane dome cross-section, as found and repaired">
+      <g font-family="JetBrains Mono, monospace" font-size="10" fill="var(--muted)">
+        <text x="20" y="20">AS FOUND</text><text x="280" y="20">REPAIRED</text>
+      </g>
+      <g id="domeA"></g><g id="domeB" transform="translate(260 0)"></g>
+    </svg>
+    <figcaption>Fig. 3 &middot; Pressing the dome pushes its pads onto the gold contacts and bridges them. A flat coil of bare copper does the same job.</figcaption>
+  </figure>
+  <div class="col">
+    <ol class="steps">
+      <li><span>Lift off the silicone membrane. Clean the gold contacts on the board with isopropyl alcohol.</span></li>
+      <li><span>Wind bare copper wire around the tip of a toothpick into a tight, flat spiral about the size of one pad. Slide it off and cut the tail.</span></li>
+      <li><span>Press the spiral as flat as you can.</span></li>
+      <li><span>Put a tiny dot of superglue on the dome with the toothpick and set the spiral on it. Keep glue off the copper face, or it won't conduct.</span></li>
+      <li><span>Make two spirals per dome, matching the original pads, then repeat for the other button.</span></li>
+    </ol>
+  </div>
+  <div class="col photos two">
+    <figure><img src="img/membrane-worn.jpg" alt="ABXY membrane before the repair, pads missing on A and B" loading="lazy"><figcaption><span class="pair-tag">Before</span><br>Two domes still have black pads. A and B have only residue.</figcaption></figure>
+    <figure><img src="img/membrane-fix.jpg" alt="Silicone membrane with copper spirals glued on two domes" loading="lazy"><figcaption><span class="pair-tag ok">After</span><br>Copper spirals on A and B.</figcaption></figure>
+  </div>
+  <div class="col">
+    <button class="show3d" data-go="6" data-sel="membrane" data-pad="fixed">Show the repair in 3D</button>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Results</span>
+    <h2>All four buttons work again</h2>
+    <div class="result">
+      <p class="big">LB, RB, A and B <em>all register again.</em></p>
+      <p>I tested every button in the gamepad tester with the controller still open, then again after closing it. Every input showed up, including the four repaired ones.</p>
+      <p>For a first real fix, done with tape, wire and a toothpick, I'll take it.</p>
+    </div>
+  </div>
+  <figure class="col test">
+    <img src="img/gamepad-test.gif" alt="Screen recording of a browser gamepad tester; each button lights up on the controller diagram as it is pressed, including A, B, LB and RB" width="720" height="394" loading="lazy">
+    <figcaption>Hardware test after the repair, in a browser gamepad tester. Each press lights up on the diagram and in the B0 to B16 readouts. A and B are B0 and B1; LB and RB are B4 and B5.</figcaption>
+  </figure>
+  <div class="col photos two">
+    <figure><img src="img/repaired.jpg" alt="The reassembled Stellaris controller with its RGB stick rings lit" loading="lazy"><figcaption>Back together, with the RGB rings on.</figcaption></figure>
+    <figure><img src="img/back-screws.jpg" alt="Back of the closed controller" loading="lazy"><figcaption>Closed up and back to normal.</figcaption></figure>
+  </div>
+  <div class="col">
+    <p>It's a stopgap, not a factory-grade repair. Superglue doesn't bond well to silicone, so the spirals may peel or shift over time. The proper fix for A and B is a set of replacement conductive carbon pads, which are sold for remote-control repair and stick on in the same way.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <span class="label">Before you try this</span>
+    <h2>What to watch for</h2>
+  </div>
+  <div class="col caveats">
+    <div class="cav"><h3>Bare wire only</h3><p>Enamelled wire from motors or speakers is coated with insulation and won't conduct. Scrape a test piece, or use plain bare copper.</p></div>
+    <div class="cav"><h3>Keep spirals inside their dome</h3><p>If a spiral reaches a neighbouring button's contacts, it can trigger the wrong button.</p></div>
+    <div class="cav"><h3>Nothing on the gold contacts</h3><p>Never put glue or solder on the board's contacts. Clean them with alcohol and leave them bare.</p></div>
+    <div class="cav"><h3>Check the grip weights</h3><p>The weights in the handles sit in the same foam. While you're inside, check it hasn't started to crumble too.</p></div>
+  </div>
+</section>
+
+<section id="disassembly">
+  <div class="col">
+    <span class="label">Teardown guide</span>
+    <h2>Taking a Stellaris apart</h2>
+    <h3>Tools</h3>
+    <ul class="tools">
+      <li>Small Phillips screwdriver</li>
+      <li>Plastic pry tool or guitar pick</li>
+      <li>Toothpicks</li>
+      <li>Isopropyl alcohol and cotton swabs</li>
+      <li>Bare copper wire</li>
+      <li>Superglue</li>
+      <li>Double-sided foam tape</li>
+      <li>A browser gamepad tester</li>
+    </ul>
+    <h3>Opening it</h3>
+    <ol class="steps">
+      <li><span>Switch the controller off and unplug the USB cable.</span></li>
+      <li><span>Remove the six back-shell screws: two at the ends of the grips, two on the shoulders, and two below the M1 and M2 paddles. <button class="show3d" data-go="2" data-sel="backshell" data-view="back">3D</button></span></li>
+      <li><span>Pry the shells apart at the grips with a plastic tool. If it resists, a screw is still in.</span></li>
+      <li><span>Lift the back half away. Nothing inside needs unplugging: the boards and the battery stay connected the whole time.</span></li>
+      <li><span>Remove the two trigger screws just below the bumpers. Lift out the triggers, the top trim and the bumpers. The bumpers have no screws of their own. <button class="show3d" data-go="3" data-sel="tscrews">3D</button></span></li>
+      <li><span>Remove the three marked screws on the battery board and lift it up and to the side, still connected. The battery and the stick modules come with it. <button class="show3d" data-go="4" data-sel="rscrews">3D</button></span></li>
+      <li><span>Remove the three marked screws on the main board and lift it off the membranes. <button class="show3d" data-go="5" data-sel="mscrews">3D</button></span></li>
+      <li><span>The membranes and button caps now lift straight out of the front shell.</span></li>
+    </ol>
+  </div>
+  <figure class="col fig">
+    <svg id="screwmap" viewBox="-100 -72 200 140" role="img" aria-label="Back of the controller with the six screw positions marked"></svg>
+    <figcaption>Fig. 4 &middot; The six back-shell screws, seen from the back.</figcaption>
+  </figure>
+  <div class="col photos">
+    <figure><img src="img/back-shell-inside.jpg" alt="Inside of the back shell with screw bosses" loading="lazy"><figcaption>The back shell from inside.</figcaption></figure>
+    <figure><img src="img/rear-board.jpg" alt="Battery board with the 1000 mAh battery and rumble motors" loading="lazy"><figcaption>Battery board with the 1000 mAh battery.</figcaption></figure>
+    <figure><img src="img/grip-weights.jpg" alt="Open controller with foam-wrapped grip weights in both handles" loading="lazy"><figcaption>Grip weights wrapped in foam.</figcaption></figure>
+  </div>
+  <div class="col">
+    <h3>Putting it back together</h3>
+    <ol class="steps">
+      <li><span>Fit the caps and membranes into the front shell, then the main board and its three screws.</span></li>
+      <li><span>Lay the battery board back in place and refit its three screws.</span></li>
+      <li><span>Seat the grip weights in their foam.</span></li>
+      <li><span>Fit the bumpers, top trim and triggers, then the two trigger screws.</span></li>
+      <li><span>Press the power button next to the USB-C port and test every button while the controller is still open. <button class="show3d" data-go="3" data-sel="power" data-view="top">3D</button></span></li>
+      <li><span>Close the shell, refit the six screws and test once more.</span></li>
+    </ol>
+    <button class="show3d" data-go="0" data-view="front">Show it closed in 3D</button>
+  </div>
+</section>
+
+</article>
+
+<section class="col comments" id="comments" aria-labelledby="comments-h">
+  <span class="label">Discussion</span>
+  <h2 id="comments-h">Reactions and comments</h2>
+  <p class="muted">Fixed yours a different way? Leave a reaction or a comment below. You need a GitHub account; comments are stored as <a href="https://github.com/danielphingston/danielphingston.github.io/discussions">GitHub Discussions</a> on this site's repository.</p>
+  <div class="giscus"></div>
+  <script src="https://giscus.app/client.js"
+    data-repo="danielphingston/danielphingston.github.io"
+    data-repo-id="R_kgDOVUSt3Q"
+    data-category="Announcements"
+    data-category-id="DIC_kwDOVUSt3c4DKkhZ"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="1"
+    data-emit-metadata="0"
+    data-input-position="top"
+    data-theme="preferred_color_scheme"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async></script>
+</section>
+</main>
+
+<footer class="wide">
+  <span><a href="/blog/">&larr; All posts</a> &middot; <a href="/">Home</a></span>
+  <span>Questions or corrections? <a href="https://www.linkedin.com/in/danielphingston">Message me on LinkedIn</a>.</span>
+</footer>
+
+</body>
+</html>
